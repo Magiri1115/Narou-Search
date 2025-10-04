@@ -1,125 +1,98 @@
-// app.js — メインの検索処理と結果描画
-import { formatDate, buildQuery, esc } from './utils.js';
-import { renderPagination } from './pagination.js';
+import { fetchWorks, formatDate, showError, hideError } from "./utils.js";
+import { renderPagination } from "./pagination.js";
 
-const form = document.getElementById('search-form');
-const qEl = document.getElementById('q');
-const fromEl = document.getElementById('from');
-const toEl = document.getElementById('to');
-const resultsBody = document.getElementById('results-body');
-const metaEl = document.getElementById('meta');
-const paginationEl = document.getElementById('pagination');
-const clearBtn = document.getElementById('clear-btn');
+const form = document.getElementById("search-form");
+const resultsTable = document.getElementById("results-table");
+const resultsBody = document.getElementById("results-body");
 
 let currentPage = 1;
-let lastQuery = null;
-const PAGE_SIZE = 10; // バックエンドと合わせる
+let currentQuery = {};
+let totalResults = 0;
+const perPage = 10;
 
-async function fetchSearch(params) {
-  const qs = buildQuery(params);
-  const url = `/search?${qs}`; // フロントは環境に合わせてプロキシ/絶対URLに変更可
-  const res = await fetch(url, {
-    headers: {
-      'Accept': 'application/json'
-    }
-  });
-  if (!res.ok) throw new Error(`Search failed: ${res.status}`);
-  return res.json();
-}
+// 検索実行
+async function search(page = 1) {
+  hideError();
+  resultsBody.innerHTML = "";
 
-function renderResults(data) {
-  // data expected: { total: int, page: int, per_page: int, results: [{ncode,title,writer,general_firstup}] }
-  resultsBody.innerHTML = '';
-  if (!data || !Array.isArray(data.results) || data.results.length === 0) {
-    metaEl.textContent = '該当なし';
-    return;
-  }
-
-  metaEl.textContent = `全 ${data.total} 件 — 表示 ${data.results.length} 件 (ページ ${data.page})`;
-
-  for (const w of data.results) {
-    const tr = document.createElement('tr');
-
-    const titleTd = document.createElement('td');
-    const a = document.createElement('a');
-    a.href = `https://ncode.syosetu.com/${encodeURIComponent(w.ncode)}/`;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.innerHTML = esc(w.title);
-    titleTd.appendChild(a);
-
-    const writerTd = document.createElement('td');
-    const wa = document.createElement('a');
-    wa.href = '#';
-    wa.dataset.writer = w.writer;
-    wa.textContent = w.writer;
-    wa.addEventListener('click', (e) => {
-      e.preventDefault();
-      // 著者名クリックでその著者の作品一覧を表示（キーワードを作者名にして再検索）
-      qEl.value = w.writer; // 検索フォームに作者名を設定
-      handleSearch(1); // ページをリセットして再検索
-    });
-    writerTd.appendChild(wa);
-
-    const dateTd = document.createElement('td');
-    dateTd.textContent = formatDate(w.general_firstup);
-
-    tr.appendChild(titleTd);
-    tr.appendChild(writerTd);
-    tr.appendChild(dateTd);
-    resultsBody.appendChild(tr);
-  }
-
-  // ページネーションの描画
-  const totalPages = Math.ceil(data.total / (data.per_page || PAGE_SIZE));
-  renderPagination(paginationEl, data.page, totalPages, (page) => {
-    handleSearch(page);
-  });
-}
-
-function getSearchParams(page = 1) {
-  return {
-    q: qEl.value.trim() || undefined,
-    from: fromEl.value.trim() || undefined,
-    to: toEl.value.trim() || undefined,
+  const params = {
+    query: currentQuery.query,
+    from: currentQuery.from,
+    to: currentQuery.to,
     page: page,
-    limit: PAGE_SIZE,
+    per_page: perPage,
+    sort: currentQuery.sort,
   };
-}
-
-async function handleSearch(page = 1) {
-  const params = getSearchParams(page);
-  const currentQuery = JSON.stringify(params);
-
-  // 前回と同じクエリかつ同じページならスキップ
-  if (lastQuery === currentQuery) return;
-  lastQuery = currentQuery;
-  currentPage = page;
-
-  resultsBody.innerHTML = '<tr><td colspan="3" class="small-muted">検索中...</td></tr>';
-  metaEl.textContent = '';
-  paginationEl.innerHTML = '';
 
   try {
-    const data = await fetchSearch(params);
-    renderResults(data);
-  } catch (error) {
-    console.error('検索エラー:', error);
-    resultsBody.innerHTML = '<tr><td colspan="3" class="small-muted">エラーが発生しました。</td></tr>';
-    metaEl.textContent = '';
+    const data = await fetchWorks(params);
+
+    if (!data.results || data.results.length === 0) {
+      showError("該当する作品が見つかりません。");
+      resultsTable.classList.add("hidden");
+      return;
+    }
+
+    resultsTable.classList.remove("hidden");
+
+    data.results.forEach((w) => {
+      const tr = document.createElement("tr");
+
+      // タイトルリンク
+      const titleTd = document.createElement("td");
+      const titleLink = document.createElement("a");
+      titleLink.href = `https://ncode.syosetu.com/${w.ncode}/`;
+      titleLink.target = "_blank";
+      titleLink.textContent = w.title;
+      titleTd.appendChild(titleLink);
+
+      // 著者リンク
+      const writerTd = document.createElement("td");
+      const writerLink = document.createElement("a");
+      writerLink.href = "#";
+      writerLink.textContent = w.writer;
+      writerLink.onclick = (e) => {
+        e.preventDefault();
+        document.getElementById("query").value = w.writer;
+        document.getElementById("sort").value = "date_desc"; // 初期化
+        handleSearch();
+      };
+      writerTd.appendChild(writerLink);
+
+      // 公開日
+      const dateTd = document.createElement("td");
+      dateTd.textContent = formatDate(w.general_firstup);
+
+      tr.appendChild(titleTd);
+      tr.appendChild(writerTd);
+      tr.appendChild(dateTd);
+      resultsBody.appendChild(tr);
+    });
+
+    totalResults = data.total;
+    const totalPages = Math.ceil(totalResults / perPage);
+    renderPagination(page, totalPages, (p) => {
+      currentPage = p;
+      search(p);
+    });
+  } catch (e) {
+    showError(e.message);
   }
 }
 
-// フォームの送信イベント
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  handleSearch(1); // 常に1ページ目から検索開始
-});
+// フォーム送信イベント
+function handleSearch(e) {
+  if (e) e.preventDefault();
+  currentPage = 1;
 
-// クリアボタンのイベント
-clearBtn.addEventListener('click', () => {
-  qEl.value = '';
-  fromEl.value = '';
-  toEl.value = '';
-  handleSearch(1);
-});
+  currentQuery = {
+    query: document.getElementById("query").value.trim(),
+    from: document.getElementById("from").value,
+    to: document.getElementById("to").value,
+    sort: document.getElementById("sort").value,
+  };
+
+  search(1);
+}
+
+form.addEventListener("submit", handleSearch);
