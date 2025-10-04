@@ -1,0 +1,32 @@
+# =============================
+# 共通（frontend / backend）
+# =============================
+node_modules/
+dist/
+build/
+.env
+.DS_Store
+
+# =============================
+# バックエンド（Genie.jl）
+# =============================
+backend/db/production.sqlite3
+backend/db/*.db
+backend/tmp/
+backend/logs/
+*.jl.cov
+
+# =============================
+# フロントエンド（Vercel）
+# =============================
+frontend/.vercel
+frontend/.cache
+frontend/.env.local
+frontend/.env.production
+
+# =============================
+# Python / Virtualenv / etc.
+# =============================
+__pycache__/
+*.pyc
+.venv/
