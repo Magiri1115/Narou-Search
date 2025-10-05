@@ -17,7 +17,7 @@ const PAGE_SIZE = 10; // バックエンドと合わせる
 
 async function fetchSearch(params) {
   const qs = buildQuery(params);
-  const url = `/search?${qs}`; // フロントは環境に合わせてプロキシ/絶対URLに変更可
+  const url = `http://localhost:8000/search?${qs}`;
   const res = await fetch(url, {
     headers: {
       'Accept': 'application/json'
@@ -79,9 +79,9 @@ function renderResults(data) {
 
 function getSearchParams(page = 1) {
   return {
-    q: qEl.value.trim() || undefined,
-    from: fromEl.value.trim() || undefined,
-    to: toEl.value.trim() || undefined,
+    keyword: qEl.value.trim() || undefined,
+    year_from: fromEl.value.trim() || undefined,
+    year_to: toEl.value.trim() || undefined,
     page: page,
     limit: PAGE_SIZE,
   };

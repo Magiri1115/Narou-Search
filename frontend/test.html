@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>API接続テスト</title>
+</head>
+<body>
+    <h1>API接続テスト</h1>
+    <button id="testBtn">APIをテスト</button>
+    <div id="result" style="margin-top: 20px; white-space: pre-wrap;"></div>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = '接続中...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/search?keyword=スライム&limit=5');
+                const data = await response.json();
+                resultDiv.textContent = '✅ 成功!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.textContent = '❌ エラー:\n' + error.message + '\n\nCORSエラーの可能性があります。ブラウザのコンソールを確認してください。';
+            }
+        });
+    </script>
+</body>
+</html>

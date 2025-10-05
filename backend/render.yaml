@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: narou-search-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    envVars:
+      - key: ENV
+        value: production
+      - key: DB_PATH
+        value: /app/db/production.sqlite3
+    buildCommand: julia -e 'using Pkg; Pkg.instantiate()'
+    startCommand: julia --project=. -e 'using Genie; Genie.loadapp(); up(8000, async=false)'
+    healthCheckPath: /
