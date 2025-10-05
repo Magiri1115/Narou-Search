@@ -1,0 +1,2126 @@
+From a95a0fa4cc187f09f44e4dae872a906a45d7b269 Mon Sep 17 00:00:00 2001
+From: Kimurist0415 <ryuhki2003@gmail.com>
+Date: Sun, 5 Oct 2025 21:34:26 +0900
+Subject: [PATCH] Add startup script and update documentation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Add start.sh for one-command server startup
+- Update README.md with startup instructions
+- Configure frontend to run on port 5173
+- Update backend configuration and controllers
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ README.md                                   |  15 +-
+ README_STARTUP.md                           |  93 ++++
+ TROUBLESHOOTING.md                          |  66 +++
+ backend/Dockerfile                          |  24 +
+ backend/Manifest.toml                       | 563 ++++++++++++++++++++
+ backend/Project.toml                        |  13 +
+ backend/app/controllers/SearchController.jl |  91 ++++
+ backend/app/models/Work.jl                  | 157 ++++++
+ backend/app/routes.jl                       |  15 +
+ backend/bin/fetch_data.jl                   | 122 +++++
+ backend/config/database.yml                 |  11 +
+ backend/config/env.jl                       |  36 ++
+ backend/db/production.sqlite3               | Bin 0 -> 20480 bytes
+ backend/db/test.sqlite3                     | Bin 0 -> 12288 bytes
+ backend/fly.toml                            |  23 +
+ backend/render.yaml                         |  14 +
+ backend/server.jl                           |  30 ++
+ backend/test/test_models.jl                 |  40 ++
+ backend/test/test_search.jl                 | 135 +++++
+ backend/test_api.jl                         |  49 ++
+ frontend/debug.html                         |  78 +++
+ frontend/index.html                         |   6 +-
+ frontend/js/app.js                          |   8 +-
+ frontend/simple-test.html                   | 144 +++++
+ frontend/test.html                          |  27 +
+ start.sh                                    |  34 ++
+ 26 files changed, 1786 insertions(+), 8 deletions(-)
+ create mode 100644 README_STARTUP.md
+ create mode 100644 TROUBLESHOOTING.md
+ create mode 100644 backend/db/test.sqlite3
+ create mode 100644 backend/server.jl
+ create mode 100644 backend/test_api.jl
+ create mode 100644 frontend/debug.html
+ create mode 100644 frontend/simple-test.html
+ create mode 100644 frontend/test.html
+ create mode 100755 start.sh
+
+diff --git a/README.md b/README.md
+index 303d25b..46fb185 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,14 @@
+-# Narou-Search
+\ No newline at end of file
++# Narou-Search
++
++## 起動方法
++
++```bash
++cd /Users/kimura2003/Downloads/julia/Narou-Search
++./start.sh
++```
++
++このコマンドで以下が自動的に起動する。
++- **フロントエンド**: http://localhost:5173
++- **バックエンドAPI**: http://localhost:8000
++
++サーバーを停止するには `Ctrl+C` を押す。
+\ No newline at end of file
+diff --git a/README_STARTUP.md b/README_STARTUP.md
+new file mode 100644
+index 0000000..a9e00ee
+--- /dev/null
++++ b/README_STARTUP.md
+@@ -0,0 +1,93 @@
++# なろう検索エンジン - 起動方法
++
++## 🚀 サーバー起動
++
++```bash
++cd /Users/kimura2003/Downloads/julia/Narou-Search
++./START_SERVERS.sh
++```
++
++起動後、ブラウザで以下にアクセス:
++- **フロントエンド**: http://localhost:8080
++- **バックエンドAPI**: http://localhost:8000
++
++## ⏹ サーバー停止
++
++```bash
++./STOP_SERVERS.sh
++```
++
++## 📝 手動起動コマンド
++
++### バックエンド (Julia/Genie.jl)
++```bash
++cd /Users/kimura2003/Downloads/julia/Narou-Search/backend
++julia --project=. server.jl
++```
++
++### フロントエンド (静的ファイルサーバー)
++```bash
++cd /Users/kimura2003/Downloads/julia/Narou-Search/frontend
++python3 -m http.server 8080
++```
++
++## 🔧 データ更新
++
++なろうAPIから最新データを取得:
++```bash
++cd /Users/kimura2003/Downloads/julia/Narou-Search/backend
++julia --project=. bin/fetch_data.jl
++```
++
++## 📊 現在のデータ
++
++- データベース: `backend/db/production.sqlite3`
++- 保存件数: 50件の人気作品
++- 主な作品: 「転生したらスライムだった件」「無職転生」「Re:ゼロ」など
++
++## 🧪 テスト実行
++
++### モデルテスト
++```bash
++cd /Users/kimura2003/Downloads/julia/Narou-Search/backend
++julia --project=. test/test_models.jl
++```
++
++### 統合テスト
++```bash
++julia --project=. test/test_search.jl
++```
++
++## 🌐 API仕様
++
++### 検索エンドポイント
++```
++GET http://localhost:8000/search
++```
++
++### パラメータ
++- `keyword`: キーワード検索（タイトル・作者名）
++- `year_from`: 開始年
++- `year_to`: 終了年
++- `sort_by`: ソート列 (`general_firstup`, `title`, `year`)
++- `order`: ソート順 (`ASC`, `DESC`)
++- `page`: ページ番号
++- `limit`: 1ページあたりの件数
++
++### レスポンス例
++```json
++{
++  "total": 50,
++  "page": 1,
++  "per_page": 10,
++  "results": [
++    {
++      "ncode": "N6316BN",
++      "title": "転生したらスライムだった件",
++      "writer": "伏瀬",
++      "year": 2013,
++      "general_firstup": "2013-02-20T00:36:17"
++    }
++  ]
++}
++```
+diff --git a/TROUBLESHOOTING.md b/TROUBLESHOOTING.md
+new file mode 100644
+index 0000000..42f9146
+--- /dev/null
++++ b/TROUBLESHOOTING.md
+@@ -0,0 +1,66 @@
++# トラブルシューティング
++
++## フロントエンドとバックエンドの接続確認
++
++### 1. バックエンドが起動しているか確認
++```bash
++curl http://localhost:8000/
++# 結果: "Narou Search API - Running on Genie.jl" が表示されればOK
++```
++
++### 2. APIが正常に動作しているか確認
++```bash
++curl "http://localhost:8000/search?keyword=スライム&limit=5"
++# JSON形式のデータが返ってくればOK
++```
++
++### 3. CORSヘッダーが設定されているか確認
++```bash
++curl -v "http://localhost:8000/search?limit=1" 2>&1 | grep -i "access-control"
++# Access-Control-Allow-Origin: * が表示されればOK
++```
++
++### 4. ブラウザでテストページを開く
++```
++http://localhost:8080/test.html
++```
++「APIをテスト」ボタンをクリックして動作確認
++
++### よくある問題
++
++#### CORSエラー
++**症状**: ブラウザのコンソールに「CORS policy」エラー
++
++**原因**: バックエンドのCORSヘッダー設定が不足
++
++**解決方法**: SearchController.jlでヘッダーが正しく設定されているか確認
++
++#### 接続エラー
++**症状**: 「Failed to fetch」エラー
++
++**原因**: バックエンドが起動していない、または異なるポート
++
++**解決方法**:
++```bash
++ps aux | grep julia  # バックエンドが起動しているか確認
++ps aux | grep "python.*8080"  # フロントエンドが起動しているか確認
++```
++
++#### サーバー再起動
++```bash
++./STOP_SERVERS.sh
++./START_SERVERS.sh
++```
++
++### デバッグ用コマンド
++
++```bash
++# バックエンドログ確認
++tail -f /tmp/genie_server.log
++
++# フロントエンドログ確認
++tail -f /tmp/frontend_server.log
++
++# 現在のサーバー状況
++ps aux | grep -E "(julia|python.*8080)" | grep -v grep
++```
+diff --git a/backend/Dockerfile b/backend/Dockerfile
+index e69de29..ff009e6 100644
+--- a/backend/Dockerfile
++++ b/backend/Dockerfile
+@@ -0,0 +1,24 @@
++FROM julia:1.10
++
++WORKDIR /app
++
++# システム依存関係
++RUN apt-get update && apt-get install -y \
++    sqlite3 \
++    && rm -rf /var/lib/apt/lists/*
++
++# Juliaパッケージのインストール
++COPY Project.toml Manifest.toml ./
++RUN julia -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
++
++# アプリケーションコードをコピー
++COPY . .
++
++# データベースディレクトリ作成
++RUN mkdir -p /app/db
++
++# ポート公開
++EXPOSE 8000
++
++# Genie.jlアプリ起動
++CMD ["julia", "--project=.", "-e", "using Genie; Genie.loadapp(); up(8000, async=false)"]
+diff --git a/backend/Manifest.toml b/backend/Manifest.toml
+index e69de29..fcae4d0 100644
+--- a/backend/Manifest.toml
++++ b/backend/Manifest.toml
+@@ -0,0 +1,563 @@
++# This file is machine-generated - editing it directly is not advised
++
++julia_version = "1.11.6"
++manifest_format = "2.0"
++project_hash = "0aa7cd0d7d008342af0ac5732922ded21358245e"
++
++[[deps.ArgParse]]
++deps = ["Logging", "TextWrap"]
++git-tree-sha1 = "22cf435ac22956a7b45b0168abbc871176e7eecc"
++uuid = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
++version = "1.2.0"
++
++[[deps.ArgTools]]
++uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
++version = "1.1.2"
++
++[[deps.Artifacts]]
++uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
++version = "1.11.0"
++
++[[deps.Base64]]
++uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
++version = "1.11.0"
++
++[[deps.BitFlags]]
++git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
++uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
++version = "0.1.9"
++
++[[deps.CSTParser]]
++deps = ["Tokenize"]
++git-tree-sha1 = "0157e592151e39fa570645e2b2debcdfb8a0f112"
++uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
++version = "3.4.3"
++
++[[deps.CodeTracking]]
++deps = ["InteractiveUtils", "UUIDs"]
++git-tree-sha1 = "980f01d6d3283b3dbdfd7ed89405f96b7256ad57"
++uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
++version = "2.0.1"
++
++[[deps.CodecZlib]]
++deps = ["TranscodingStreams", "Zlib_jll"]
++git-tree-sha1 = "962834c22b66e32aa10f7611c08c8ca4e20749a9"
++uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
++version = "0.7.8"
++
++[[deps.CommonMark]]
++deps = ["Crayons", "PrecompileTools"]
++git-tree-sha1 = "5fdf00d1979fd4883b44b754fc3423175c9504b4"
++uuid = "a80b9123-70ca-4bc0-993e-6e3bcb318db6"
++version = "0.8.16"
++
++[[deps.Compat]]
++deps = ["TOML", "UUIDs"]
++git-tree-sha1 = "0037835448781bb46feb39866934e243886d756a"
++uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
++version = "4.18.0"
++
++    [deps.Compat.extensions]
++    CompatLinearAlgebraExt = "LinearAlgebra"
++
++    [deps.Compat.weakdeps]
++    Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
++    LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
++
++[[deps.Compiler]]
++git-tree-sha1 = "382d79bfe72a406294faca39ef0c3cef6e6ce1f1"
++uuid = "807dbc54-b67e-4c79-8afb-eafe4df6f2e1"
++version = "0.1.1"
++
++[[deps.ConcurrentUtilities]]
++deps = ["Serialization", "Sockets"]
++git-tree-sha1 = "d9d26935a0bcffc87d2613ce14c527c99fc543fd"
++uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
++version = "2.5.0"
++
++[[deps.Crayons]]
++git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
++uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
++version = "4.1.1"
++
++[[deps.DBInterface]]
++git-tree-sha1 = "a444404b3f94deaa43ca2a58e18153a82695282b"
++uuid = "a10d1c49-ce27-4219-8d33-6db1a4562965"
++version = "2.6.1"
++
++[[deps.DataAPI]]
++git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
++uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
++version = "1.16.0"
++
++[[deps.DataStructures]]
++deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
++git-tree-sha1 = "4e1fe97fdaed23e9dc21d4d664bea76b65fc50a0"
++uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
++version = "0.18.22"
++
++[[deps.DataValueInterfaces]]
++git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
++uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
++version = "1.0.0"
++
++[[deps.Dates]]
++deps = ["Printf"]
++uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
++version = "1.11.0"
++
++[[deps.Distributed]]
++deps = ["Random", "Serialization", "Sockets"]
++uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
++version = "1.11.0"
++
++[[deps.DotEnv]]
++deps = ["PrecompileTools"]
++git-tree-sha1 = "92e88cb68a5b10545234f46dfaeb2fa8a8a50c45"
++uuid = "4dc1fcf4-5e3b-5448-94ab-0c38ec0385c1"
++version = "1.0.0"
++
++[[deps.Downloads]]
++deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
++uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
++version = "1.6.0"
++
++[[deps.ExceptionUnwrapping]]
++deps = ["Test"]
++git-tree-sha1 = "d36f682e590a83d63d1c7dbd287573764682d12a"
++uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
++version = "0.1.11"
++
++[[deps.EzXML]]
++deps = ["Printf", "XML2_jll"]
++git-tree-sha1 = "680a39c9aadce7c721b68d979e66dc65d2021aa6"
++uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
++version = "1.2.2"
++
++[[deps.FilePathsBase]]
++deps = ["Compat", "Dates"]
++git-tree-sha1 = "3bab2c5aa25e7840a4b065805c0cdfc01f3068d2"
++uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
++version = "0.9.24"
++weakdeps = ["Mmap", "Test"]
++
++    [deps.FilePathsBase.extensions]
++    FilePathsBaseMmapExt = "Mmap"
++    FilePathsBaseTestExt = "Test"
++
++[[deps.FileWatching]]
++uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
++version = "1.11.0"
++
++[[deps.GMP_jll]]
++deps = ["Artifacts", "Libdl"]
++uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
++version = "6.3.0+0"
++
++[[deps.Genie]]
++deps = ["ArgParse", "Base64", "Dates", "Distributed", "DotEnv", "EzXML", "FilePathsBase", "HTTP", "HttpCommon", "Inflector", "JSON3", "JuliaFormatter", "Logging", "LoggingExtras", "LoweredCodeUtils", "MIMEs", "Markdown", "Millboard", "Nettle", "OrderedCollections", "Pkg", "REPL", "Random", "Reexport", "Revise", "SHA", "Serialization", "Sockets", "UUIDs", "Unicode", "XML2_jll", "YAML"]
++git-tree-sha1 = "df21c321b745588abce097aad99d3095d1c79e80"
++uuid = "c43c736e-a2d1-11e8-161f-af95117fbd1e"
++version = "5.33.13"
++
++[[deps.Glob]]
++git-tree-sha1 = "97285bbd5230dd766e9ef6749b80fc617126d496"
++uuid = "c27321d9-0574-5035-807b-f59d2c89b15c"
++version = "1.3.1"
++
++[[deps.HTTP]]
++deps = ["Base64", "CodecZlib", "ConcurrentUtilities", "Dates", "ExceptionUnwrapping", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "PrecompileTools", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
++git-tree-sha1 = "ed5e9c58612c4e081aecdb6e1a479e18462e041e"
++uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
++version = "1.10.17"
++
++[[deps.HttpCommon]]
++deps = ["Dates", "Nullables", "Test", "URIParser"]
++git-tree-sha1 = "46313284237aa6ca67a6bce6d6fbd323d19cff59"
++uuid = "77172c1b-203f-54ac-aa54-3f1198fe9f90"
++version = "0.5.0"
++
++[[deps.Inflector]]
++deps = ["Unicode"]
++git-tree-sha1 = "c82a172a07c94887709e613cc67cec0b472fb742"
++uuid = "6d011eab-0732-4556-8808-e463c76bf3b6"
++version = "1.1.0"
++
++[[deps.InlineStrings]]
++git-tree-sha1 = "8f3d257792a522b4601c24a577954b0a8cd7334d"
++uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
++version = "1.4.5"
++
++    [deps.InlineStrings.extensions]
++    ArrowTypesExt = "ArrowTypes"
++    ParsersExt = "Parsers"
++
++    [deps.InlineStrings.weakdeps]
++    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
++    Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
++
++[[deps.InteractiveUtils]]
++deps = ["Markdown"]
++uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
++version = "1.11.0"
++
++[[deps.IteratorInterfaceExtensions]]
++git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
++uuid = "82899510-4779-5014-852e-03e436cf321d"
++version = "1.0.0"
++
++[[deps.JLLWrappers]]
++deps = ["Artifacts", "Preferences"]
++git-tree-sha1 = "0533e564aae234aff59ab625543145446d8b6ec2"
++uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
++version = "1.7.1"
++
++[[deps.JSON3]]
++deps = ["Dates", "Mmap", "Parsers", "PrecompileTools", "StructTypes", "UUIDs"]
++git-tree-sha1 = "411eccfe8aba0814ffa0fdf4860913ed09c34975"
++uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
++version = "1.14.3"
++
++    [deps.JSON3.extensions]
++    JSON3ArrowExt = ["ArrowTypes"]
++
++    [deps.JSON3.weakdeps]
++    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
++
++[[deps.JuliaFormatter]]
++deps = ["CSTParser", "CommonMark", "DataStructures", "Glob", "PrecompileTools", "TOML", "Tokenize"]
++git-tree-sha1 = "59cf7ad64f1b0708a4fa4369879d33bad3239b56"
++uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
++version = "1.0.62"
++
++[[deps.JuliaInterpreter]]
++deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
++git-tree-sha1 = "d8337622fe53c05d16f031df24daf0270e53bc64"
++uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
++version = "0.10.5"
++
++[[deps.LibCURL]]
++deps = ["LibCURL_jll", "MozillaCACerts_jll"]
++uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
++version = "0.6.4"
++
++[[deps.LibCURL_jll]]
++deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
++uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
++version = "8.6.0+0"
++
++[[deps.LibGit2]]
++deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
++uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
++version = "1.11.0"
++
++[[deps.LibGit2_jll]]
++deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
++uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
++version = "1.7.2+0"
++
++[[deps.LibSSH2_jll]]
++deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
++uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
++version = "1.11.0+1"
++
++[[deps.Libdl]]
++uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
++version = "1.11.0"
++
++[[deps.Libiconv_jll]]
++deps = ["Artifacts", "JLLWrappers", "Libdl"]
++git-tree-sha1 = "be484f5c92fad0bd8acfef35fe017900b0b73809"
++uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
++version = "1.18.0+0"
++
++[[deps.Logging]]
++uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
++version = "1.11.0"
++
++[[deps.LoggingExtras]]
++deps = ["Dates", "Logging"]
++git-tree-sha1 = "f02b56007b064fbfddb4c9cd60161b6dd0f40df3"
++uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
++version = "1.1.0"
++
++[[deps.LoweredCodeUtils]]
++deps = ["CodeTracking", "Compiler", "JuliaInterpreter"]
++git-tree-sha1 = "73b98709ad811a6f81d84e105f4f695c229385ba"
++uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
++version = "3.4.3"
++
++[[deps.MIMEs]]
++git-tree-sha1 = "c64d943587f7187e751162b3b84445bbbd79f691"
++uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
++version = "1.1.0"
++
++[[deps.Markdown]]
++deps = ["Base64"]
++uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
++version = "1.11.0"
++
++[[deps.MbedTLS]]
++deps = ["Dates", "MbedTLS_jll", "MozillaCACerts_jll", "NetworkOptions", "Random", "Sockets"]
++git-tree-sha1 = "c067a280ddc25f196b5e7df3877c6b226d390aaf"
++uuid = "739be429-bea8-5141-9913-cc70e7f3736d"
++version = "1.1.9"
++
++[[deps.MbedTLS_jll]]
++deps = ["Artifacts", "Libdl"]
++uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
++version = "2.28.6+0"
++
++[[deps.Millboard]]
++git-tree-sha1 = "ea6a5b7e56e76d8051023faaa11d91d1d881dac3"
++uuid = "39ec1447-df44-5f4c-beaa-866f30b4d3b2"
++version = "0.2.5"
++
++[[deps.Mmap]]
++uuid = "a63ad114-7e13-5084-954f-fe012c677804"
++version = "1.11.0"
++
++[[deps.MozillaCACerts_jll]]
++uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
++version = "2023.12.12"
++
++[[deps.Nettle]]
++deps = ["Libdl", "Nettle_jll"]
++git-tree-sha1 = "6fa48cbae828267848ee32c1bb31d1652e210d7d"
++uuid = "49dea1ee-f6fa-5aa6-9a11-8816cee7d4b9"
++version = "1.0.0"
++
++[[deps.Nettle_jll]]
++deps = ["Artifacts", "GMP_jll", "JLLWrappers", "Libdl"]
++git-tree-sha1 = "fd4678a4bd1f7156c98691200fab47c76b376360"
++uuid = "4c82536e-c426-54e4-b420-14f461c4ed8b"
++version = "3.10.1+0"
++
++[[deps.NetworkOptions]]
++uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
++version = "1.2.0"
++
++[[deps.Nullables]]
++git-tree-sha1 = "8f87854cc8f3685a60689d8edecaa29d2251979b"
++uuid = "4d1e1d77-625e-5b40-9113-a560ec7a8ecd"
++version = "1.0.0"
++
++[[deps.OpenSSL]]
++deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
++git-tree-sha1 = "f1a7e086c677df53e064e0fdd2c9d0b0833e3f6e"
++uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
++version = "1.5.0"
++
++[[deps.OpenSSL_jll]]
++deps = ["Artifacts", "JLLWrappers", "Libdl"]
++git-tree-sha1 = "2ae7d4ddec2e13ad3bddf5c0796f7547cf682391"
++uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
++version = "3.5.2+0"
++
++[[deps.OrderedCollections]]
++git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
++uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
++version = "1.8.1"
++
++[[deps.Parsers]]
++deps = ["Dates", "PrecompileTools", "UUIDs"]
++git-tree-sha1 = "7d2f8f21da5db6a806faf7b9b292296da42b2810"
++uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
++version = "2.8.3"
++
++[[deps.Pkg]]
++deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "Random", "SHA", "TOML", "Tar", "UUIDs", "p7zip_jll"]
++uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
++version = "1.11.0"
++weakdeps = ["REPL"]
++
++    [deps.Pkg.extensions]
++    REPLExt = "REPL"
++
++[[deps.PrecompileTools]]
++deps = ["Preferences"]
++git-tree-sha1 = "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
++uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
++version = "1.2.1"
++
++[[deps.Preferences]]
++deps = ["TOML"]
++git-tree-sha1 = "0f27480397253da18fe2c12a4ba4eb9eb208bf3d"
++uuid = "21216c6a-2e73-6563-6e65-726566657250"
++version = "1.5.0"
++
++[[deps.Printf]]
++deps = ["Unicode"]
++uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
++version = "1.11.0"
++
++[[deps.REPL]]
++deps = ["InteractiveUtils", "Markdown", "Sockets", "StyledStrings", "Unicode"]
++uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
++version = "1.11.0"
++
++[[deps.Random]]
++deps = ["SHA"]
++uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
++version = "1.11.0"
++
++[[deps.Reexport]]
++git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
++uuid = "189a3867-3050-52da-a836-e630ba90ab69"
++version = "1.2.2"
++
++[[deps.Requires]]
++deps = ["UUIDs"]
++git-tree-sha1 = "62389eeff14780bfe55195b7204c0d8738436d64"
++uuid = "ae029012-a4dd-5104-9daa-d747884805df"
++version = "1.3.1"
++
++[[deps.Revise]]
++deps = ["CodeTracking", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "REPL", "Requires", "UUIDs", "Unicode"]
++git-tree-sha1 = "d852eba0cc08181083a58d5eb9dccaec3129cb03"
++uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
++version = "3.9.0"
++weakdeps = ["Distributed"]
++
++    [deps.Revise.extensions]
++    DistributedExt = "Distributed"
++
++[[deps.SHA]]
++uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
++version = "0.7.0"
++
++[[deps.SQLite]]
++deps = ["DBInterface", "Random", "SQLite_jll", "Serialization", "Tables", "WeakRefStrings"]
++git-tree-sha1 = "38b82dbc52b7db40bea182688c7a1103d06948a4"
++uuid = "0aa819cd-b072-5ff4-a722-6bc24af294d9"
++version = "1.6.1"
++
++[[deps.SQLite_jll]]
++deps = ["Artifacts", "JLLWrappers", "Libdl", "Zlib_jll"]
++git-tree-sha1 = "9a325057cdb9b066f1f96dc77218df60fe3007cb"
++uuid = "76ed43ae-9a5d-5a62-8c75-30186b810ce8"
++version = "3.48.0+0"
++
++[[deps.Serialization]]
++uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
++version = "1.11.0"
++
++[[deps.SimpleBufferStream]]
++git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
++uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
++version = "1.2.0"
++
++[[deps.Sockets]]
++uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
++version = "1.11.0"
++
++[[deps.StringEncodings]]
++deps = ["Libiconv_jll"]
++git-tree-sha1 = "b765e46ba27ecf6b44faf70df40c57aa3a547dcb"
++uuid = "69024149-9ee7-55f6-a4c4-859efe599b68"
++version = "0.3.7"
++
++[[deps.StructTypes]]
++deps = ["Dates", "UUIDs"]
++git-tree-sha1 = "159331b30e94d7b11379037feeb9b690950cace8"
++uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
++version = "1.11.0"
++
++[[deps.StyledStrings]]
++uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
++version = "1.11.0"
++
++[[deps.TOML]]
++deps = ["Dates"]
++uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
++version = "1.0.3"
++
++[[deps.TableTraits]]
++deps = ["IteratorInterfaceExtensions"]
++git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
++uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
++version = "1.0.1"
++
++[[deps.Tables]]
++deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "OrderedCollections", "TableTraits"]
++git-tree-sha1 = "f2c1efbc8f3a609aadf318094f8fc5204bdaf344"
++uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
++version = "1.12.1"
++
++[[deps.Tar]]
++deps = ["ArgTools", "SHA"]
++uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
++version = "1.10.0"
++
++[[deps.Test]]
++deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
++uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
++version = "1.11.0"
++
++[[deps.TextWrap]]
++git-tree-sha1 = "43044b737fa70bc12f6105061d3da38f881a3e3c"
++uuid = "b718987f-49a8-5099-9789-dcd902bef87d"
++version = "1.0.2"
++
++[[deps.Tokenize]]
++git-tree-sha1 = "468b4685af4abe0e9fd4d7bf495a6554a6276e75"
++uuid = "0796e94c-ce3b-5d07-9a54-7f471281c624"
++version = "0.5.29"
++
++[[deps.TranscodingStreams]]
++git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
++uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
++version = "0.11.3"
++
++[[deps.URIParser]]
++deps = ["Unicode"]
++git-tree-sha1 = "53a9f49546b8d2dd2e688d216421d050c9a31d0d"
++uuid = "30578b45-9adc-5946-b283-645ec420af67"
++version = "0.4.1"
++
++[[deps.URIs]]
++git-tree-sha1 = "bef26fb046d031353ef97a82e3fdb6afe7f21b1a"
++uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
++version = "1.6.1"
++
++[[deps.UUIDs]]
++deps = ["Random", "SHA"]
++uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
++version = "1.11.0"
++
++[[deps.Unicode]]
++uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
++version = "1.11.0"
++
++[[deps.WeakRefStrings]]
++deps = ["DataAPI", "InlineStrings", "Parsers"]
++git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
++uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
++version = "1.4.2"
++
++[[deps.XML2_jll]]
++deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
++git-tree-sha1 = "c217bad8fccb3bbfef7d7902326eacfbd0d702ad"
++uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
++version = "2.14.4+0"
++
++[[deps.YAML]]
++deps = ["Base64", "Dates", "Printf", "StringEncodings"]
++git-tree-sha1 = "2f58ac39f64b41fb812340347525be3b590cce3b"
++uuid = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
++version = "0.4.14"
++
++[[deps.Zlib_jll]]
++deps = ["Libdl"]
++uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
++version = "1.2.13+1"
++
++[[deps.nghttp2_jll]]
++deps = ["Artifacts", "Libdl"]
++uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
++version = "1.59.0+0"
++
++[[deps.p7zip_jll]]
++deps = ["Artifacts", "Libdl"]
++uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
++version = "17.4.0+2"
+diff --git a/backend/Project.toml b/backend/Project.toml
+index e69de29..f69d395 100644
+--- a/backend/Project.toml
++++ b/backend/Project.toml
+@@ -0,0 +1,13 @@
++name = "NarouSearchBackend"
++uuid = "12345678-1234-1234-1234-123456789abc"
++version = "0.1.0"
++
++[deps]
++Genie = "c43c736e-a2d1-11e8-161f-af95117fbd1e"
++HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
++JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
++SQLite = "0aa819cd-b072-5ff4-a722-6bc24af294d9"
++DBInterface = "a10d1c49-ce27-4219-8d33-6db1a4562965"
++YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
++Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
++Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+diff --git a/backend/app/controllers/SearchController.jl b/backend/app/controllers/SearchController.jl
+index e69de29..6a012a0 100644
+--- a/backend/app/controllers/SearchController.jl
++++ b/backend/app/controllers/SearchController.jl
+@@ -0,0 +1,91 @@
++"""
++Search API Controller
++"""
++module SearchController
++
++using Genie, Genie.Renderer.Json, Genie.Requests
++using SQLite
++
++include("../models/Work.jl")
++using .WorkModel
++
++include("../../config/env.jl")
++using .EnvConfig
++
++export search
++
++function search()
++    headers = Dict(
++        "Access-Control-Allow-Origin" => "*",
++        "Access-Control-Allow-Methods" => "GET, POST, OPTIONS",
++        "Access-Control-Allow-Headers" => "Content-Type"
++    )
++    
++    try
++        payload = Genie.Requests.getpayload()
++        
++        keyword = get(payload, :keyword, nothing)
++        if !isnothing(keyword) && isempty(keyword)
++            keyword = nothing
++        end
++        
++        year_from_str = get(payload, :year_from, nothing)
++        year_from = isnothing(year_from_str) ? nothing : tryparse(Int, string(year_from_str))
++        
++        year_to_str = get(payload, :year_to, nothing)
++        year_to = isnothing(year_to_str) ? nothing : tryparse(Int, string(year_to_str))
++        
++        sort_by = get(payload, :sort_by, "general_firstup")
++        order = get(payload, :order, "DESC")
++        
++        page = max(1, tryparse(Int, string(get(payload, :page, "1"))) |> x -> isnothing(x) ? 1 : x)
++        limit = clamp(tryparse(Int, string(get(payload, :limit, "10"))) |> x -> isnothing(x) ? 10 : x, 1, 100)
++        offset = (page - 1) * limit
++        
++        db = SQLite.DB(EnvConfig.get_db_path())
++        
++        works = WorkModel.search_works(
++            db,
++            keyword = keyword,
++            year_from = year_from,
++            year_to = year_to,
++            sort_by = sort_by,
++            order = order,
++            limit = limit,
++            offset = offset
++        )
++        
++        total = WorkModel.count_works(
++            db,
++            keyword = keyword,
++            year_from = year_from,
++            year_to = year_to
++        )
++        
++        works_data = map(works) do work
++            Dict(
++                "ncode" => work.ncode,
++                "title" => work.title,
++                "writer" => work.writer,
++                "year" => work.year,
++                "general_firstup" => string(work.general_firstup)
++            )
++        end
++        
++        response = Dict(
++            "total" => total,
++            "page" => page,
++            "per_page" => limit,
++            "results" => works_data
++        )
++        
++        return Genie.Renderer.Json.json(response, headers = headers)
++        
++    catch e
++        @error "Search error" exception=(e, catch_backtrace())
++        response = Dict("success" => false, "error" => string(e))
++        return Genie.Renderer.Json.json(response, headers = headers)
++    end
++end
++
++end # module
+diff --git a/backend/app/models/Work.jl b/backend/app/models/Work.jl
+index e69de29..217eafe 100644
+--- a/backend/app/models/Work.jl
++++ b/backend/app/models/Work.jl
+@@ -0,0 +1,157 @@
++"""
++Work data model
++"""
++module WorkModel
++
++using SQLite
++using DBInterface
++using Dates
++
++export Work, search_works, save_work, create_table
++
++"""
++Work struct
++"""
++struct Work
++    ncode::String
++    title::String
++    writer::String
++    year::Int
++    general_firstup::DateTime
++end
++
++"""
++Create works table
++"""
++function create_table(db::SQLite.DB)
++    DBInterface.execute(db, """
++        CREATE TABLE IF NOT EXISTS works (
++            ncode TEXT PRIMARY KEY,
++            title TEXT NOT NULL,
++            writer TEXT NOT NULL,
++            year INTEGER NOT NULL,
++            general_firstup TEXT NOT NULL,
++            created_at TEXT DEFAULT CURRENT_TIMESTAMP
++        )
++    """)
++end
++
++"""
++Search works
++"""
++function search_works(
++    db::SQLite.DB;
++    keyword::Union{String, Nothing} = nothing,
++    year_from::Union{Int, Nothing} = nothing,
++    year_to::Union{Int, Nothing} = nothing,
++    sort_by::String = "general_firstup",
++    order::String = "DESC",
++    limit::Int = 10,
++    offset::Int = 0
++)::Vector{Work}
++
++    query = "SELECT ncode, title, writer, year, general_firstup FROM works WHERE 1=1"
++    params = []
++
++    if !isnothing(keyword) && !isempty(keyword)
++        # スペースで区切って複数キーワードをAND検索
++        keywords = split(keyword)
++        for kw in keywords
++            if !isempty(kw)
++                query *= " AND (title LIKE ? OR writer LIKE ?)"
++                keyword_pattern = "%$kw%"
++                push!(params, keyword_pattern, keyword_pattern)
++            end
++        end
++    end
++
++    if !isnothing(year_from)
++        query *= " AND year >= ?"
++        push!(params, year_from)
++    end
++
++    if !isnothing(year_to)
++        query *= " AND year <= ?"
++        push!(params, year_to)
++    end
++
++    valid_sort_columns = ["general_firstup", "title", "year"]
++    sort_column = sort_by in valid_sort_columns ? sort_by : "general_firstup"
++    sort_order = uppercase(order) in ["ASC", "DESC"] ? uppercase(order) : "DESC"
++    query *= " ORDER BY $sort_column $sort_order"
++
++    query *= " LIMIT ? OFFSET ?"
++    push!(params, limit, offset)
++
++    result = DBInterface.execute(db, query, params)
++
++    works = Work[]
++    for row in result
++        push!(works, Work(
++            row.ncode,
++            row.title,
++            row.writer,
++            row.year,
++            DateTime(row.general_firstup)
++        ))
++    end
++
++    return works
++end
++
++"""
++Save work (UPSERT)
++"""
++function save_work(db::SQLite.DB, work::Work)
++    DBInterface.execute(db, """
++        INSERT INTO works (ncode, title, writer, year, general_firstup)
++        VALUES (?, ?, ?, ?, ?)
++        ON CONFLICT(ncode) DO UPDATE SET
++            title = excluded.title,
++            writer = excluded.writer,
++            year = excluded.year,
++            general_firstup = excluded.general_firstup
++    """, [work.ncode, work.title, work.writer, work.year, string(work.general_firstup)])
++end
++
++"""
++Count works
++"""
++function count_works(
++    db::SQLite.DB;
++    keyword::Union{String, Nothing} = nothing,
++    year_from::Union{Int, Nothing} = nothing,
++    year_to::Union{Int, Nothing} = nothing
++)::Int
++
++    query = "SELECT COUNT(*) as count FROM works WHERE 1=1"
++    params = []
++
++    if !isnothing(keyword) && !isempty(keyword)
++        # スペースで区切って複数キーワードをAND検索
++        keywords = split(keyword)
++        for kw in keywords
++            if !isempty(kw)
++                query *= " AND (title LIKE ? OR writer LIKE ?)"
++                keyword_pattern = "%$kw%"
++                push!(params, keyword_pattern, keyword_pattern)
++            end
++        end
++    end
++
++    if !isnothing(year_from)
++        query *= " AND year >= ?"
++        push!(params, year_from)
++    end
++
++    if !isnothing(year_to)
++        query *= " AND year <= ?"
++        push!(params, year_to)
++    end
++
++    result = DBInterface.execute(db, query, params)
++    row = first(result)
++    return row.count
++end
++
++end # module
+diff --git a/backend/app/routes.jl b/backend/app/routes.jl
+index e69de29..7efb290 100644
+--- a/backend/app/routes.jl
++++ b/backend/app/routes.jl
+@@ -0,0 +1,15 @@
++
++
++using Genie.Router
++
++include("controllers/SearchController.jl")
++using .SearchController
++
++
++route("/") do
++    "Narou Search API - OK"
++end
++
++route("/search", SearchController.search, method = GET)
++route("/search", SearchController.search, method = POST)
++route("/search", SearchController.search, method = OPTIONS)
+diff --git a/backend/bin/fetch_data.jl b/backend/bin/fetch_data.jl
+index e69de29..0b7759d 100644
+--- a/backend/bin/fetch_data.jl
++++ b/backend/bin/fetch_data.jl
+@@ -0,0 +1,122 @@
++"""
++Narou API data fetch and cache update script
++"""
++
++using HTTP
++using JSON3
++using SQLite
++using Dates
++
++include("../app/models/Work.jl")
++using .WorkModel
++
++include("../config/env.jl")
++using .EnvConfig
++
++"""
++Fetch data from Narou API
++"""
++function fetch_narou_data(;limit::Int = 50)::Vector
++    url = "https://api.syosetu.com/novelapi/api/"
++
++    params = Dict(
++        "out" => "json",
++        "of" => "n-t-w-gf",
++        "lim" => limit,
++        "order" => "hyoka"
++    )
++
++    try
++        response = HTTP.get(url, query = params)
++        data = JSON3.read(String(response.body))
++
++        if length(data) > 1
++            return collect(data[2:end])
++        else
++            return []
++        end
++    catch e
++        @error "Narou API fetch error" exception=(e, catch_backtrace())
++        return []
++    end
++end
++
++"""
++Convert API data to Work struct
++"""
++function convert_to_work(item)::Union{Work, Nothing}
++    try
++        datetime_str = get(item, :general_firstup, "")
++        if isempty(datetime_str)
++            return nothing
++        end
++
++        dt = DateTime(datetime_str, "yyyy-mm-dd HH:MM:SS")
++        year = Dates.year(dt)
++
++        return Work(
++            get(item, :ncode, ""),
++            get(item, :title, "Untitled"),
++            get(item, :writer, "Unknown"),
++            year,
++            dt
++        )
++    catch e
++        @error "Data conversion error" item exception=(e, catch_backtrace())
++        return nothing
++    end
++end
++
++"""
++Update database
++"""
++function update_database(works::Vector{Work})
++    db_path = EnvConfig.get_db_path()
++
++    db = SQLite.DB(db_path)
++    WorkModel.create_table(db)
++
++    saved_count = 0
++    for work in works
++        try
++            WorkModel.save_work(db, work)
++            saved_count += 1
++        catch e
++            @error "Save error" work exception=(e, catch_backtrace())
++        end
++    end
++
++    @info "Database updated" saved_count total=length(works)
++    return saved_count
++end
++
++"""
++Main process
++"""
++function main()
++    @info "Starting Narou API data fetch..."
++
++    raw_data = fetch_narou_data(limit = 50)
++    @info "Fetched data count" count=length(raw_data)
++
++    works = Work[]
++    for item in raw_data
++        work = convert_to_work(item)
++        if !isnothing(work)
++            push!(works, work)
++        end
++    end
++
++    @info "Conversion completed" valid_works=length(works)
++
++    if length(works) > 0
++        saved = update_database(works)
++        @info "Process completed" saved_count=saved
++    else
++        @warn "No valid data found"
++    end
++end
++
++if abspath(PROGRAM_FILE) == @__FILE__
++    main()
++end
+diff --git a/backend/config/database.yml b/backend/config/database.yml
+index e69de29..2892577 100644
+--- a/backend/config/database.yml
++++ b/backend/config/database.yml
+@@ -0,0 +1,11 @@
++development:
++  adapter: sqlite
++  database: db/development.sqlite3
++
++test:
++  adapter: sqlite
++  database: db/test.sqlite3
++
++production:
++  adapter: sqlite
++  database: db/production.sqlite3
+diff --git a/backend/config/env.jl b/backend/config/env.jl
+index e69de29..62df811 100644
+--- a/backend/config/env.jl
++++ b/backend/config/env.jl
+@@ -0,0 +1,36 @@
++"""
++環境変数設定モジュール
++"""
++module EnvConfig
++
++export get_env, get_db_path, get_api_base_url, is_production
++
++"""
++環境変数を取得（デフォルト値付き）
++"""
++function get_env(key::String, default::String="")::String
++    return get(ENV, key, default)
++end
++
++"""
++データベースパスを取得
++"""
++function get_db_path()::String
++    return get_env("DB_PATH", joinpath(@__DIR__, "..", "db", "production.sqlite3"))
++end
++
++"""
++APIベースURLを取得
++"""
++function get_api_base_url()::String
++    return get_env("API_BASE_URL", "http://localhost:8000")
++end
++
++"""
++本番環境かどうかを判定
++"""
++function is_production()::Bool
++    return lowercase(get_env("ENV", "development")) == "production"
++end
++
++end # module
+diff --git a/backend/db/production.sqlite3 b/backend/db/production.sqlite3
+index e69de29bb2d1d6434b8b29ae775ad8c2e48c5391..cfcb17402f79757360f5bc631c0ba9dfd6c09a16 100644
+GIT binary patch
+literal 20480
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/backend/db/test.sqlite3 b/backend/db/test.sqlite3
+new file mode 100644
+index 0000000000000000000000000000000000000000..6fb0e50cc6950f08ea46162b6e89922a85d6f6aa
+GIT binary patch
+literal 12288
+zcmeI$yKmD#7y$5d9=NSko6QsA5CcTQ=xjHXMnbBax+TR4#kopU2w5h+q*fk=i_?;|
+z?EE?W3EdDI5;L!f8AdL~E<=g3Fd*@r{J6VM_vyQzyqw#Q+$dqV8}nh1U<+MFl7u!f
+zMhMB`E{Z#ElIWE3fq2ixi<*pXpKh+IKTttAL&}-@cF_Weg8&GC00@8p2!H?xfB*=9
+z00@A<e1X%FBx{-`z3L^wvjIDad4HTf3U$x1se`G#<vKW>!Z%lN)<&H;WSBaSDc<)Q
+zP1`%f51hkW=kX*;23frIkmA;X>;4X&aB*<vzgAz2PFcWlqeY!v$HN!HJvL%I82H_Y
+zkCVysd09G~1qlm%aWqe>+;(>C1DE3Zf#*3b>eEKkX;ZtopO##y6fSA^Gzmqcki8tg
+z7>EM>V3Ne?*iU!w8|iCyu3wsYuBvZPS*anVruNmV%6sMYd}WA$00@8p2!H?xfB*=9
+z00@8p2>g!%o;Y%ETq#&qix6To#;hMixShm&il2DwI2yC?sXa-KVvcS3lSxdX6GL2-
+zkXm|)sj6;>*(x@S8d(>!J7rnBmglUt2hosWH|nx1&$j$oEHZS%T##qCBx~36JZo8P
+z^&{3jFX*dCWa(sG6hMu;a|_xl%338)WZh>x#&&qjM#+TdMb+gmBA2Mh(oI6iM$MY-
+z?+=@66lCp2p37_oy{LojP7t!;G%IT>+aI~38&ztUbITIn+uq;#=2k?Svic6G-_>vG
+zNA-i~LIVL1009sH0T2KI5C8!X009sH0TB4N1(u7NH2WV@E$6+pQr@$QdCx2?6}9E`
+Gzs*nU8O!hh
+
+literal 0
+HcmV?d00001
+
+diff --git a/backend/fly.toml b/backend/fly.toml
+index e69de29..83cfd83 100644
+--- a/backend/fly.toml
++++ b/backend/fly.toml
+@@ -0,0 +1,23 @@
++app = "narou-search-backend"
++primary_region = "nrt"
++
++[build]
++
++[http_service]
++  internal_port = 8000
++  force_https = true
++  auto_stop_machines = true
++  auto_start_machines = true
++  min_machines_running = 0
++
++[[vm]]
++  cpu_kind = "shared"
++  cpus = 1
++  memory_mb = 1024
++
++[env]
++  ENV = "production"
++
++[mounts]
++  source = "narou_data"
++  destination = "/app/db"
+diff --git a/backend/render.yaml b/backend/render.yaml
+index e69de29..971f977 100644
+--- a/backend/render.yaml
++++ b/backend/render.yaml
+@@ -0,0 +1,14 @@
++services:
++  - type: web
++    name: narou-search-backend
++    runtime: docker
++    plan: free
++    region: singapore
++    envVars:
++      - key: ENV
++        value: production
++      - key: DB_PATH
++        value: /app/db/production.sqlite3
++    buildCommand: julia -e 'using Pkg; Pkg.instantiate()'
++    startCommand: julia --project=. -e 'using Genie; Genie.loadapp(); up(8000, async=false)'
++    healthCheckPath: /
+diff --git a/backend/server.jl b/backend/server.jl
+new file mode 100644
+index 0000000..8182f8e
+--- /dev/null
++++ b/backend/server.jl
+@@ -0,0 +1,30 @@
++"""
++Genie.jl API Server
++"""
++
++using Genie, Genie.Router, Genie.Renderer.Json
++using SQLite
++
++# Load models
++include("app/models/Work.jl")
++using .WorkModel
++
++# Load config
++include("config/env.jl")
++using .EnvConfig
++
++# Load controller
++include("app/controllers/SearchController.jl")
++using .SearchController
++
++# Routes
++route("/") do
++    "Narou Search API - Running on Genie.jl"
++end
++
++route("/search", SearchController.search, method = GET)
++route("/search", SearchController.search, method = POST)
++route("/search", SearchController.search, method = OPTIONS)
++
++# Start server
++up(8000, async = false)
+diff --git a/backend/test/test_models.jl b/backend/test/test_models.jl
+index e69de29..5aedfcc 100644
+--- a/backend/test/test_models.jl
++++ b/backend/test/test_models.jl
+@@ -0,0 +1,40 @@
++"""
++モデルユニットテスト
++"""
++
++using Test
++using SQLite
++using Dates
++
++include("../app/models/Work.jl")
++using .WorkModel
++
++@testset "Work構造体テスト" begin
++    work = Work(
++        "N1234",
++        "テスト作品",
++        "テスト作者",
++        2024,
++        DateTime(2024, 1, 1, 0, 0, 0)
++    )
++
++    @test work.ncode == "N1234"
++    @test work.title == "テスト作品"
++    @test work.writer == "テスト作者"
++    @test work.year == 2024
++    @test work.general_firstup == DateTime(2024, 1, 1, 0, 0, 0)
++
++    @info "✓ Work構造体テスト成功"
++end
++
++@testset "テーブル作成テスト" begin
++    db = SQLite.DB(":memory:")
++    WorkModel.create_table(db)
++
++    result = DBInterface.execute(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='works'")
++    @test length(collect(result)) == 1
++
++    @info "✓ テーブル作成テスト成功"
++end
++
++@info "全モデルテスト完了"
+diff --git a/backend/test/test_search.jl b/backend/test/test_search.jl
+index e69de29..d14a267 100644
+--- a/backend/test/test_search.jl
++++ b/backend/test/test_search.jl
+@@ -0,0 +1,135 @@
++"""
++Search API Integration Tests
++"""
++
++using Test
++using HTTP
++using JSON3
++using SQLite
++using Dates
++
++include("../app/models/Work.jl")
++using .WorkModel
++
++include("../config/env.jl")
++using .EnvConfig
++
++"""
++Setup test database
++"""
++function setup_test_db()
++    db_path = joinpath(@__DIR__, "..", "db", "test.sqlite3")
++
++    if isfile(db_path)
++        rm(db_path)
++    end
++
++    db = SQLite.DB(db_path)
++    WorkModel.create_table(db)
++
++    test_works = [
++        Work("N0001", "Isekai Story", "Author A", 2020, DateTime(2020, 1, 1, 0, 0, 0)),
++        Work("N0002", "Magic Academy", "Author B", 2021, DateTime(2021, 6, 15, 12, 0, 0)),
++        Work("N0003", "Hero Adventure", "Author C", 2022, DateTime(2022, 3, 20, 9, 30, 0)),
++        Work("N0004", "Isekai Chef", "Author A", 2023, DateTime(2023, 7, 10, 18, 0, 0)),
++        Work("N0005", "Slime Life", "Author D", 2021, DateTime(2021, 12, 1, 0, 0, 0))
++    ]
++
++    for work in test_works
++        WorkModel.save_work(db, work)
++    end
++
++    @info "Test data loaded" count=length(test_works)
++    return db, db_path
++end
++
++@testset "Keyword Search Test" begin
++    db, db_path = setup_test_db()
++
++    results = WorkModel.search_works(db, keyword="Isekai")
++    @test length(results) == 2
++    @test any(w -> w.title == "Isekai Story", results)
++    @test any(w -> w.title == "Isekai Chef", results)
++
++    results = WorkModel.search_works(db, keyword="Author A")
++    @test length(results) == 2
++
++    @info "✓ Keyword search test passed"
++end
++
++@testset "Year Range Search Test" begin
++    db, db_path = setup_test_db()
++
++    results = WorkModel.search_works(db, year_from=2021, year_to=2021)
++    @test length(results) == 2
++
++    results = WorkModel.search_works(db, year_from=2020, year_to=2022)
++    @test length(results) == 4
++
++    results = WorkModel.search_works(db, year_from=2023)
++    @test length(results) == 1
++    @test results[1].title == "Isekai Chef"
++
++    @info "✓ Year range search test passed"
++end
++
++@testset "Sort Test" begin
++    db, db_path = setup_test_db()
++
++    results = WorkModel.search_works(db, sort_by="title", order="ASC")
++    @test results[1].title < results[end].title
++
++    results = WorkModel.search_works(db, sort_by="year", order="DESC")
++    @test results[1].year == 2023
++    @test results[end].year == 2020
++
++    @info "✓ Sort test passed"
++end
++
++@testset "Pagination Test" begin
++    db, db_path = setup_test_db()
++
++    results = WorkModel.search_works(db, limit=2, offset=0)
++    @test length(results) == 2
++
++    results = WorkModel.search_works(db, limit=2, offset=2)
++    @test length(results) == 2
++
++    results = WorkModel.search_works(db, limit=2, offset=4)
++    @test length(results) == 1
++
++    @info "✓ Pagination test passed"
++end
++
++@testset "Count Test" begin
++    db, db_path = setup_test_db()
++
++    total = WorkModel.count_works(db)
++    @test total == 5
++
++    total = WorkModel.count_works(db, keyword="Isekai")
++    @test total == 2
++
++    total = WorkModel.count_works(db, year_from=2021, year_to=2021)
++    @test total == 2
++
++    @info "✓ Count test passed"
++end
++
++@testset "UPSERT Test" begin
++    db, db_path = setup_test_db()
++
++    updated_work = Work("N0001", "Isekai Story [Revised]", "Author A", 2020, DateTime(2020, 1, 1, 0, 0, 0))
++    WorkModel.save_work(db, updated_work)
++
++    results = WorkModel.search_works(db, keyword="Revised")
++    @test length(results) == 1
++    @test results[1].title == "Isekai Story [Revised]"
++
++    total = WorkModel.count_works(db)
++    @test total == 5
++
++    @info "✓ UPSERT test passed"
++end
++
++@info "All integration tests completed"
+diff --git a/backend/test_api.jl b/backend/test_api.jl
+new file mode 100644
+index 0000000..0b2509b
+--- /dev/null
++++ b/backend/test_api.jl
+@@ -0,0 +1,49 @@
++"""
++Quick API test without starting server
++"""
++
++using SQLite
++
++include("app/models/Work.jl")
++using .WorkModel
++
++include("config/env.jl")
++using .EnvConfig
++
++# Test search functionality
++db_path = EnvConfig.get_db_path()
++db = SQLite.DB(db_path)
++
++println("=== Testing Search API ===")
++println()
++
++# Test 1: All works
++println("1. Get all works (limit 5):")
++results = WorkModel.search_works(db, limit=5)
++for work in results
++    println("  - $(work.title) by $(work.writer) ($(work.year))")
++end
++println()
++
++# Test 2: Keyword search
++println("2. Search by keyword 'スライム':")
++results = WorkModel.search_works(db, keyword="スライム")
++for work in results
++    println("  - $(work.title) by $(work.writer)")
++end
++println()
++
++# Test 3: Year range
++println("3. Works from 2015-2018:")
++results = WorkModel.search_works(db, year_from=2015, year_to=2018)
++for work in results
++    println("  - $(work.title) ($(work.year))")
++end
++println()
++
++# Test 4: Count
++total = WorkModel.count_works(db)
++println("4. Total works in database: $total")
++println()
++
++println("=== API Test Complete ===")
+diff --git a/frontend/debug.html b/frontend/debug.html
+new file mode 100644
+index 0000000..22d6ea2
+--- /dev/null
++++ b/frontend/debug.html
+@@ -0,0 +1,78 @@
++<!DOCTYPE html>
++<html lang="ja">
++<head>
++    <meta charset="UTF-8">
++    <title>デバッグ - API接続テスト</title>
++    <style>
++        body { font-family: sans-serif; padding: 20px; }
++        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
++        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
++        .success { color: green; }
++        .error { color: red; }
++    </style>
++</head>
++<body>
++    <h1>🔧 API接続デバッグ</h1>
++    
++    <div>
++        <button onclick="testAPI()">✅ API接続テスト</button>
++        <button onclick="testSearch()">🔍 検索テスト（スライム）</button>
++        <button onclick="testSearchWithParams()">📊 パラメータ付き検索</button>
++    </div>
++
++    <h2>結果:</h2>
++    <pre id="output">ボタンをクリックしてテストしてください...</pre>
++
++    <script>
++        const output = document.getElementById('output');
++
++        async function testAPI() {
++            output.textContent = '接続中...';
++            try {
++                const res = await fetch('http://localhost:8000/');
++                const text = await res.text();
++                output.innerHTML = `<span class="success">✅ 成功!</span>\n\n${text}`;
++            } catch (e) {
++                output.innerHTML = `<span class="error">❌ エラー:</span>\n${e.message}`;
++            }
++        }
++
++        async function testSearch() {
++            output.textContent = '検索中...';
++            try {
++                const res = await fetch('http://localhost:8000/search?keyword=スライム');
++                const data = await res.json();
++                output.innerHTML = `<span class="success">✅ 成功!</span>\n\n` + 
++                    JSON.stringify(data, null, 2);
++            } catch (e) {
++                output.innerHTML = `<span class="error">❌ エラー:</span>\n${e.message}\n\n` +
++                    `ブラウザのコンソール（F12）を確認してください`;
++            }
++        }
++
++        async function testSearchWithParams() {
++            output.textContent = '検索中...';
++            try {
++                const params = new URLSearchParams({
++                    keyword: '異世界',
++                    year_from: 2015,
++                    year_to: 2020,
++                    limit: 5
++                });
++                const res = await fetch(`http://localhost:8000/search?${params}`);
++                const data = await res.json();
++                output.innerHTML = `<span class="success">✅ 成功!</span>\n\n` +
++                    `総件数: ${data.total}\n` +
++                    `表示件数: ${data.results.length}\n\n` +
++                    JSON.stringify(data.results.map(r => ({
++                        title: r.title,
++                        writer: r.writer,
++                        year: r.year
++                    })), null, 2);
++            } catch (e) {
++                output.innerHTML = `<span class="error">❌ エラー:</span>\n${e.message}`;
++            }
++        }
++    </script>
++</body>
++</html>
+diff --git a/frontend/index.html b/frontend/index.html
+index 356212b..c8b90e4 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -57,8 +57,8 @@
+             </footer>
+         </main>
+ 
+-        <script src="/js/utils.js"></script>
+-        <script src="/js/pagination.js"></script>
+-        <script src="/js/app.js"></script>
++        <script type="module" src="/js/utils.js"></script>
++        <script type="module" src="/js/pagination.js"></script>
++        <script type="module" src="/js/app.js"></script>
+     </body>
+ </html>
+\ No newline at end of file
+diff --git a/frontend/js/app.js b/frontend/js/app.js
+index ce9b90b..60291de 100644
+--- a/frontend/js/app.js
++++ b/frontend/js/app.js
+@@ -17,7 +17,7 @@ const PAGE_SIZE = 10; // バックエンドと合わせる
+ 
+ async function fetchSearch(params) {
+   const qs = buildQuery(params);
+-  const url = `/search?${qs}`; // フロントは環境に合わせてプロキシ/絶対URLに変更可
++  const url = `http://localhost:8000/search?${qs}`;
+   const res = await fetch(url, {
+     headers: {
+       'Accept': 'application/json'
+@@ -79,9 +79,9 @@ function renderResults(data) {
+ 
+ function getSearchParams(page = 1) {
+   return {
+-    q: qEl.value.trim() || undefined,
+-    from: fromEl.value.trim() || undefined,
+-    to: toEl.value.trim() || undefined,
++    keyword: qEl.value.trim() || undefined,
++    year_from: fromEl.value.trim() || undefined,
++    year_to: toEl.value.trim() || undefined,
+     page: page,
+     limit: PAGE_SIZE,
+   };
+diff --git a/frontend/simple-test.html b/frontend/simple-test.html
+new file mode 100644
+index 0000000..2e56ca6
+--- /dev/null
++++ b/frontend/simple-test.html
+@@ -0,0 +1,144 @@
++<!DOCTYPE html>
++<html lang="ja">
++<head>
++    <meta charset="UTF-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1.0">
++    <title>シンプル検索テスト</title>
++    <style>
++        body {
++            font-family: 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
++            max-width: 800px;
++            margin: 50px auto;
++            padding: 20px;
++        }
++        input, button {
++            padding: 10px;
++            font-size: 16px;
++            margin: 5px;
++        }
++        input {
++            width: 300px;
++        }
++        button {
++            background: #2b6cb0;
++            color: white;
++            border: none;
++            cursor: pointer;
++            border-radius: 5px;
++        }
++        button:hover {
++            background: #1e4e8c;
++        }
++        #results {
++            margin-top: 20px;
++        }
++        .work {
++            border: 1px solid #e0e0e0;
++            padding: 15px;
++            margin: 10px 0;
++            border-radius: 5px;
++            background: #f9f9f9;
++        }
++        .title {
++            font-weight: bold;
++            color: #2b6cb0;
++            font-size: 18px;
++        }
++        .info {
++            color: #666;
++            margin-top: 5px;
++        }
++        .loading {
++            color: #666;
++            font-style: italic;
++        }
++        .error {
++            color: red;
++            padding: 15px;
++            background: #ffe6e6;
++            border-radius: 5px;
++        }
++    </style>
++</head>
++<body>
++    <h1>🔍 なろう検索テスト</h1>
++    
++    <div>
++        <input type="text" id="keyword" placeholder="キーワードを入力（例: スライム）" value="スライム">
++        <button onclick="searchWorks()">検索</button>
++    </div>
++
++    <div id="results"></div>
++
++    <script>
++        async function searchWorks() {
++            const keyword = document.getElementById('keyword').value;
++            const resultsDiv = document.getElementById('results');
++            
++            resultsDiv.innerHTML = '<p class="loading">検索中...</p>';
++
++            try {
++                console.log('検索開始:', keyword);
++                
++                const url = `http://localhost:8000/search?keyword=${encodeURIComponent(keyword)}&limit=10`;
++                console.log('リクエストURL:', url);
++                
++                const response = await fetch(url);
++                console.log('レスポンス:', response.status, response.statusText);
++                
++                if (!response.ok) {
++                    throw new Error(`HTTP error! status: ${response.status}`);
++                }
++                
++                const data = await response.json();
++                console.log('取得データ:', data);
++                
++                if (data.total === 0) {
++                    resultsDiv.innerHTML = '<p>検索結果が見つかりませんでした。</p>';
++                    return;
++                }
++                
++                let html = `<h2>検索結果: ${data.total}件</h2>`;
++                
++                data.results.forEach(work => {
++                    html += `
++                        <div class="work">
++                            <div class="title">
++                                <a href="https://ncode.syosetu.com/${work.ncode}/" target="_blank">
++                                    ${work.title}
++                                </a>
++                            </div>
++                            <div class="info">
++                                作者: ${work.writer} | 
++                                公開年: ${work.year} | 
++                                初回掲載: ${work.general_firstup.substring(0, 10)}
++                            </div>
++                        </div>
++                    `;
++                });
++                
++                resultsDiv.innerHTML = html;
++                
++            } catch (error) {
++                console.error('エラー詳細:', error);
++                resultsDiv.innerHTML = `
++                    <div class="error">
++                        <strong>エラーが発生しました:</strong><br>
++                        ${error.message}<br><br>
++                        <strong>確認事項:</strong><br>
++                        1. バックエンドが起動しているか確認<br>
++                        2. ブラウザのコンソール（F12）でCORSエラーを確認<br>
++                        3. http://localhost:8000 が動いているか確認
++                    </div>
++                `;
++            }
++        }
++
++        // ページ読み込み時にテスト
++        window.addEventListener('load', () => {
++            console.log('ページ読み込み完了');
++            console.log('バックエンドURL: http://localhost:8000');
++        });
++    </script>
++</body>
++</html>
+diff --git a/frontend/test.html b/frontend/test.html
+new file mode 100644
+index 0000000..7667acf
+--- /dev/null
++++ b/frontend/test.html
+@@ -0,0 +1,27 @@
++<!DOCTYPE html>
++<html lang="ja">
++<head>
++    <meta charset="UTF-8">
++    <title>API接続テスト</title>
++</head>
++<body>
++    <h1>API接続テスト</h1>
++    <button id="testBtn">APIをテスト</button>
++    <div id="result" style="margin-top: 20px; white-space: pre-wrap;"></div>
++
++    <script>
++        document.getElementById('testBtn').addEventListener('click', async () => {
++            const resultDiv = document.getElementById('result');
++            resultDiv.textContent = '接続中...';
++            
++            try {
++                const response = await fetch('http://localhost:8000/search?keyword=スライム&limit=5');
++                const data = await response.json();
++                resultDiv.textContent = '✅ 成功!\n\n' + JSON.stringify(data, null, 2);
++            } catch (error) {
++                resultDiv.textContent = '❌ エラー:\n' + error.message + '\n\nCORSエラーの可能性があります。ブラウザのコンソールを確認してください。';
++            }
++        });
++    </script>
++</body>
++</html>
+diff --git a/start.sh b/start.sh
+new file mode 100755
+index 0000000..1a1ba95
+--- /dev/null
++++ b/start.sh
+@@ -0,0 +1,34 @@
++#!/bin/bash
++
++# カラー出力用
++GREEN='\033[0;32m'
++BLUE='\033[0;34m'
++NC='\033[0m' # No Color
++
++echo -e "${BLUE}=== Narou Search Starting ===${NC}"
++
++# バックエンド起動（バックグラウンド）
++echo -e "${GREEN}Starting backend (Julia/Genie on port 8000)...${NC}"
++cd backend
++julia --project=. server.jl &
++BACKEND_PID=$!
++cd ..
++
++# フロントエンド起動（バックグラウンド）
++echo -e "${GREEN}Starting frontend (HTTP server on port 5173)...${NC}"
++cd frontend
++python3 -m http.server 5173 &
++FRONTEND_PID=$!
++cd ..
++
++echo -e "${BLUE}Servers started!${NC}"
++echo -e "Frontend: ${GREEN}http://localhost:5173${NC}"
++echo -e "Backend API: ${GREEN}http://localhost:8000${NC}"
++echo ""
++echo "Press Ctrl+C to stop all servers"
++
++# Ctrl+Cで両方のサーバーを停止
++trap "echo -e '\n${BLUE}Stopping servers...${NC}'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" INT
++
++# プロセスが終了するまで待機
++wait
+-- 
+2.49.0
+
