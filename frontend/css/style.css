@@ -142,6 +142,7 @@ button.secondary {
   border-radius: 6px;
   border: 1px solid #e3e7ef;
   background: #fff;
+  color: #222;
   cursor: pointer
 }
 

@@ -17,25 +17,17 @@ export function renderPagination(containerEl, currentPage, totalPages, onPageCli
     return b;
   };
 
-  // Prev
-  containerEl.appendChild(createBtn('前へ', currentPage - 1));
+  // Prev arrow
+  containerEl.appendChild(createBtn('←', currentPage - 1));
 
-  // show up to 7 page buttons with window
-  const windowSize = 7;
-  let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
-  let end = Math.min(totalPages, start + windowSize - 1);
-  if (end - start + 1 < windowSize) {
-    start = Math.max(1, end - windowSize + 1);
-  }
+  // Show up to 5 page buttons, starting from the lowest page in the current range
+  const maxButtons = 5;
+  let start = currentPage;
+  let end = Math.min(totalPages, start + maxButtons - 1);
 
-  if (start > 1) {
-    containerEl.appendChild(createBtn('1', 1));
-    if (start > 2) {
-      const ell = document.createElement('span');
-      ell.textContent = '...';
-      ell.style.padding = '6px';
-      containerEl.appendChild(ell);
-    }
+  // If we're near the end and can't show 5 buttons, adjust start
+  if (end - start + 1 < maxButtons) {
+    start = Math.max(1, end - maxButtons + 1);
   }
 
   for (let p = start; p <= end; p++) {
@@ -43,16 +35,6 @@ export function renderPagination(containerEl, currentPage, totalPages, onPageCli
     containerEl.appendChild(createBtn(String(p), p, cls));
   }
 
-  if (end < totalPages) {
-    if (end < totalPages - 1) {
-      const ell = document.createElement('span');
-      ell.textContent = '...';
-      ell.style.padding = '6px';
-      containerEl.appendChild(ell);
-    }
-    containerEl.appendChild(createBtn(String(totalPages), totalPages));
-  }
-
-  // Next
-  containerEl.appendChild(createBtn('次へ', currentPage + 1));
+  // Next arrow
+  containerEl.appendChild(createBtn('→', currentPage + 1));
 }
