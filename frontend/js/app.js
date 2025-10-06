@@ -2,6 +2,14 @@ import { fetchWorks, formatDate, showError, hideError } from "./utils.js";
 import { renderPagination } from "./pagination.js";
 
 const form = document.getElementById("search-form");
+// 🔽 検索フォーム内の要素を取得
+const qEl = document.getElementById("query");          // キーワード入力欄
+const fromEl = document.getElementById("year-from");   // 開始年入力欄
+const toEl = document.getElementById("year-to");       // 終了年入力欄
+const clearBtn = document.getElementById("clear-btn"); // クリアボタン
+const metaEl = document.getElementById("meta");        // 件数などを表示する要素
+const paginationEl = document.getElementById("pagination"); // ページネーション表示用
+
 const resultsTable = document.getElementById("results-table");
 const resultsBody = document.getElementById("results-body");
 
