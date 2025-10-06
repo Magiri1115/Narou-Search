@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "name": "narou-search-frontend",
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" }
+  ],
+  "routes": [
+    {
+      "src": "/search",
+      "dest": "https://naro-backend.fly.dev/search"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "BACKEND_BASE_URL": "https://naro-backend.fly.dev"
+  }
+}
