@@ -1,61 +1,61 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>なろう検索 — 検索エンジン</title>
-        <link rel="stylesheet" href="/css/style.css">
-    </head>
-    <body>
-        <main class="container">
-            <header class="header">
-                <h1>なろう検索</h1>
-                <p class="lead">タイトル・作者・公開年で作品を検索します</p>
-            </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小説家になろう検索エンジン</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>📖 小説家になろう検索エンジン</h1>
+  </header>
 
-            <section class="search-panel">
-                <form id="search-form">
-                    <div class="row">
-                        <label for="q">キーワード</label>
-                        <input id="q" name="q" type="search" placeholder="タイトル / 作者名 を入力" autofocus>
-                    </div>
+  <main>
+    <section class="search-section">
+      <form id="search-form">
+        <div class="form-group">
+          <label for="query">キーワード</label>
+          <input type="text" id="query" name="query" placeholder="タイトル・作者名を入力" />
+        </div>
 
-                    <div class="row">
-                        <label for="from">開始年</label>
-                        <input id="from" name="from" type="number" min="1900" max="2100" placeholder="例: 2010">
+        <div class="form-group">
+          <label for="from">開始年</label>
+          <input type="number" id="from" name="from" min="2000" max="2030" placeholder="2000" />
+        </div>
 
-                        <label for="to">終了年</label>
-                        <input id="to" name="to" type="number" min="1900" max="2100" placeholder="例: 2020">
-                    </div>
+        <div class="form-group">
+          <label for="to">終了年</label>
+          <input type="number" id="to" name="to" min="2000" max="2030" placeholder="2025" />
+        </div>
 
-                    <div class="row actions">
-                        <button id="search-btn" type="submit">検索</button>
-                        <button id="clear-btn" type="button" class="secondary">クリア</button>
-                    </div>
-                </form>
-            </section>
+        <div class="form-group">
+          <label for="sort">並び順</label>
+          <select id="sort" name="sort">
+            <option value="date_desc" selected>公開日（新しい順）</option>
+            <option value="date_asc">公開日（古い順）</option>
+          </select>
+        </div>
 
-            <section class="results-panel">
-                <div id="meta" class="meta"></div>
-                <table id="results-table" class="results">
-                    <thead>
-                        <tr>
-                            <th>タイトル</th>
-                            <th>作者</th>
-                            <th>公開日</th>
-                        </tr>
-                    </thead>
-                    <tbody id="results-body">
-                        </tbody>
-                </table>
+        <button type="submit" id="search-btn">検索</button>
+      </form>
+    </section>
 
-                <div id="pagination" class="pagination"></div>
-            </section>
-
-            <footer class="footer">
-                <small>Powered by Genie.jl API (backend)</small>
-            </footer>
-        </main>
+    <section class="results-section">
+      <div id="error-message" class="error hidden"></div>
+      <table id="results-table" class="hidden">
+        <thead>
+          <tr>
+            <th>タイトル</th>
+            <th>著者</th>
+            <th>公開日</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+      <div id="pagination" class="pagination hidden"></div>
+    </section>
+  </main>
 
         <script type="module" src="/js/utils.js"></script>
         <script type="module" src="/js/pagination.js"></script>

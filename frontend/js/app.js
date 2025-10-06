@@ -1,15 +1,9 @@
-// app.js — メインの検索処理と結果描画
-import { formatDate, buildQuery, esc } from './utils.js';
-import { renderPagination } from './pagination.js';
+import { fetchWorks, formatDate, showError, hideError } from "./utils.js";
+import { renderPagination } from "./pagination.js";
 
-const form = document.getElementById('search-form');
-const qEl = document.getElementById('q');
-const fromEl = document.getElementById('from');
-const toEl = document.getElementById('to');
-const resultsBody = document.getElementById('results-body');
-const metaEl = document.getElementById('meta');
-const paginationEl = document.getElementById('pagination');
-const clearBtn = document.getElementById('clear-btn');
+const form = document.getElementById("search-form");
+const resultsTable = document.getElementById("results-table");
+const resultsBody = document.getElementById("results-body");
 
 let currentPage = 1;
 let lastQuery = null;
@@ -35,40 +29,41 @@ function renderResults(data) {
     return;
   }
 
-  metaEl.textContent = `全 ${data.total} 件 — 表示 ${data.results.length} 件 (ページ ${data.page})`;
+    resultsTable.classList.remove("hidden");
 
-  for (const w of data.results) {
-    const tr = document.createElement('tr');
+    data.results.forEach((w) => {
+      const tr = document.createElement("tr");
 
-    const titleTd = document.createElement('td');
-    const a = document.createElement('a');
-    a.href = `https://ncode.syosetu.com/${encodeURIComponent(w.ncode)}/`;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.innerHTML = esc(w.title);
-    titleTd.appendChild(a);
+      // タイトルリンク
+      const titleTd = document.createElement("td");
+      const titleLink = document.createElement("a");
+      titleLink.href = `https://ncode.syosetu.com/${w.ncode}/`;
+      titleLink.target = "_blank";
+      titleLink.textContent = w.title;
+      titleTd.appendChild(titleLink);
 
-    const writerTd = document.createElement('td');
-    const wa = document.createElement('a');
-    wa.href = '#';
-    wa.dataset.writer = w.writer;
-    wa.textContent = w.writer;
-    wa.addEventListener('click', (e) => {
-      e.preventDefault();
-      // 著者名クリックでその著者の作品一覧を表示（キーワードを作者名にして再検索）
-      qEl.value = w.writer; // 検索フォームに作者名を設定
-      handleSearch(1); // ページをリセットして再検索
+      // 著者リンク
+      const writerTd = document.createElement("td");
+      const writerLink = document.createElement("a");
+      writerLink.href = "#";
+      writerLink.textContent = w.writer;
+      writerLink.onclick = (e) => {
+        e.preventDefault();
+        document.getElementById("query").value = w.writer;
+        document.getElementById("sort").value = "date_desc"; // 初期化
+        handleSearch();
+      };
+      writerTd.appendChild(writerLink);
+
+      // 公開日
+      const dateTd = document.createElement("td");
+      dateTd.textContent = formatDate(w.general_firstup);
+
+      tr.appendChild(titleTd);
+      tr.appendChild(writerTd);
+      tr.appendChild(dateTd);
+      resultsBody.appendChild(tr);
     });
-    writerTd.appendChild(wa);
-
-    const dateTd = document.createElement('td');
-    dateTd.textContent = formatDate(w.general_firstup);
-
-    tr.appendChild(titleTd);
-    tr.appendChild(writerTd);
-    tr.appendChild(dateTd);
-    resultsBody.appendChild(tr);
-  }
 
   // ページネーションの描画
   const totalPages = Math.ceil(data.total / (data.per_page || PAGE_SIZE));

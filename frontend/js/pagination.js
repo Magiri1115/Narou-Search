@@ -1,4 +1,4 @@
-// pagination.js — ページネーション制御
+// pagination.js - ページネーション制御
 
 /**
  * renderPagination(containerEl, currentPage, totalPages, onPageClick)
