@@ -3,7 +3,9 @@
 """
 module EnvConfig
 
-export get_env, get_db_path, get_api_base_url, is_production
+using SQLite
+
+export get_env, get_db_path, get_api_base_url, is_production, get_db
 
 """
 環境変数を取得（デフォルト値付き）
@@ -31,6 +33,20 @@ end
 """
 function is_production()::Bool
     return lowercase(get_env("ENV", "development")) == "production"
+end
+
+# Database connection (singleton pattern)
+const _db_connection = Ref{Union{SQLite.DB, Nothing}}(nothing)
+
+"""
+データベース接続を取得
+"""
+function get_db()::SQLite.DB
+    if isnothing(_db_connection[])
+        db_path = get_db_path()
+        _db_connection[] = SQLite.DB(db_path)
+    end
+    return _db_connection[]
 end
 
 end # module

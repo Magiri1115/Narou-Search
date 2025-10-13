@@ -1,6 +1,7 @@
 // app.js — メインの検索処理と結果描画
 import { formatDate, buildQuery, esc } from './utils.js';
 import { renderPagination } from './pagination.js';
+import { analytics } from './firebase.js';
 
 const form = document.getElementById('search-form');
 const qEl = document.getElementById('q');
@@ -46,6 +47,14 @@ function renderResults(data) {
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.innerHTML = esc(w.title);
+    a.addEventListener('click', () => {
+      // Firebase Analytics: Log work click
+      analytics.logEvent( 'work_click', {
+        work_title: w.title,
+        work_ncode: w.ncode,
+        work_author: w.writer
+      });
+    });
     titleTd.appendChild(a);
 
     const writerTd = document.createElement('td');
@@ -55,6 +64,10 @@ function renderResults(data) {
     wa.textContent = w.writer;
     wa.addEventListener('click', (e) => {
       e.preventDefault();
+      // Firebase Analytics: Log author click
+      analytics.logEvent( 'author_click', {
+        author_name: w.writer
+      });
       // 著者名クリックでその著者の作品一覧を表示（キーワードを作者名にして再検索）
       qEl.value = w.writer; // 検索フォームに作者名を設定
       handleSearch(1); // ページをリセットして再検索
@@ -103,10 +116,23 @@ async function handleSearch(page = 1) {
   try {
     const data = await fetchSearch(params);
     renderResults(data);
+
+    // Firebase Analytics: Log search event
+    analytics.logEvent( 'search', {
+      search_term: params.keyword || '',
+      year_from: params.year_from || '',
+      year_to: params.year_to || '',
+      results_count: data.total || 0
+    });
   } catch (error) {
     console.error('検索エラー:', error);
     resultsBody.innerHTML = '<tr><td colspan="3" class="small-muted">エラーが発生しました。</td></tr>';
     metaEl.textContent = '';
+
+    // Firebase Analytics: Log error event
+    analytics.logEvent( 'search_error', {
+      error_message: error.message
+    });
   }
 }
 

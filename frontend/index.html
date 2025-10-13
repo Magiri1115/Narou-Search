@@ -5,9 +5,28 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>なろう検索 — 検索エンジン</title>
         <link rel="stylesheet" href="/css/style.css">
+        <!-- FirebaseUI CSS -->
+        <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
     </head>
     <body>
-        <main class="container">
+        <!-- Login Screen (Full Page) -->
+        <div id="login-screen">
+            <div class="login-container">
+                <h1 class="login-title">なろう検索</h1>
+                <p class="login-subtitle">タイトル・作者・公開年で作品を検索</p>
+
+                <!-- FirebaseUI Container -->
+                <div id="firebaseui-auth-container"></div>
+            </div>
+        </div>
+
+        <!-- Auth Button (Top Right) - Hidden initially -->
+        <div class="auth-container" style="display: none;">
+            <div id="user-info" style="display: none;"></div>
+            <button id="auth-btn" class="auth-button">ログアウト</button>
+        </div>
+
+        <main class="container" style="display: none;">
             <header class="header">
                 <h1>なろう検索</h1>
                 <p class="lead">タイトル・作者・公開年で作品を検索します</p>
@@ -57,8 +76,23 @@
             </footer>
         </main>
 
-        <script type="module" src="/js/utils.js"></script>
-        <script type="module" src="/js/pagination.js"></script>
-        <script type="module" src="/js/app.js"></script>
+        <!-- Firebase SDK (Compat version) -->
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+
+        <!-- FirebaseUI JS -->
+        <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+
+        <!-- Initialize Firebase (before modules) -->
+        <script src="/js/firebase-init.js?v=7"></script>
+
+        <script type="module" src="/js/firebase.js?v=7"></script>
+        <script type="module" src="/js/auth.js?v=7"></script>
+        <script type="module" src="/js/utils.js?v=7"></script>
+        <script type="module" src="/js/pagination.js?v=7"></script>
+        <script type="module" src="/js/app.js?v=7"></script>
+        <script type="module" src="/js/auth-ui.js?v=7"></script>
     </body>
 </html>

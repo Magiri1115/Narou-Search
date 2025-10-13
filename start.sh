@@ -18,7 +18,7 @@ sleep 1
 # バックエンド起動（バックグラウンド）
 echo -e "${GREEN}Starting backend (Julia/Genie on port 8000)...${NC}"
 cd backend
-julia --project=. server.jl &
+/opt/homebrew/bin/julia --project=. server.jl &
 BACKEND_PID=$!
 cd ..
 
