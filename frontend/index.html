@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>なろう検索 — 検索エンジン</title>
+        <link rel="stylesheet" href="/css/style.css">
+        <!-- FirebaseUI CSS -->
+        <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
+    </head>
+    <body>
+        <!-- Login Screen (Full Page) -->
+        <div id="login-screen">
+            <div class="login-container">
+                <h1 class="login-title">なろう検索</h1>
+                <p class="login-subtitle">タイトル・作者・公開年で作品を検索</p>
+
+                <!-- FirebaseUI Container -->
+                <div id="firebaseui-auth-container"></div>
+            </div>
+        </div>
+
+        <!-- Auth Button (Top Right) - Hidden initially -->
+        <div class="auth-container" style="display: none;">
+            <div id="user-info" style="display: none;"></div>
+            <button id="auth-btn" class="auth-button">ログアウト</button>
+        </div>
+
+        <main class="container" style="display: none;">
+            <header class="header">
+                <h1>なろう検索</h1>
+                <p class="lead">タイトル・作者・公開年で作品を検索します</p>
+            </header>
+
+            <section class="search-panel">
+                <form id="search-form">
+                    <div class="row">
+                        <label for="q">キーワード</label>
+                        <input id="q" name="q" type="search" placeholder="タイトル / 作者名 を入力" autofocus>
+                    </div>
+
+                    <div class="row">
+                        <label for="from">開始年</label>
+                        <input id="from" name="from" type="number" min="1900" max="2100" placeholder="例: 2010">
+
+                        <label for="to">終了年</label>
+                        <input id="to" name="to" type="number" min="1900" max="2100" placeholder="例: 2020">
+                    </div>
+
+                    <div class="row actions">
+                        <button id="search-btn" type="submit">検索</button>
+                        <button id="clear-btn" type="button" class="secondary">クリア</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="results-panel">
+                <div id="meta" class="meta"></div>
+                <table id="results-table" class="results">
+                    <thead>
+                        <tr>
+                            <th>タイトル</th>
+                            <th>作者</th>
+                            <th>公開日</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                        </tbody>
+                </table>
+
+                <div id="pagination" class="pagination"></div>
+            </section>
+
+            <footer class="footer">
+                <small>Powered by Genie.jl API (backend)</small>
+            </footer>
+        </main>
+
+        <!-- Firebase SDK (Compat version) -->
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+
+        <!-- FirebaseUI JS -->
+        <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+
+        <!-- Initialize Firebase (before modules) -->
+        <script src="/js/firebase-init.js?v=7"></script>
+
+        <script type="module" src="/js/firebase.js?v=7"></script>
+        <script type="module" src="/js/auth.js?v=7"></script>
+        <script type="module" src="/js/utils.js?v=7"></script>
+        <script type="module" src="/js/pagination.js?v=7"></script>
+        <script type="module" src="/js/app.js?v=7"></script>
+        <script type="module" src="/js/auth-ui.js?v=7"></script>
+    </body>
+</html>

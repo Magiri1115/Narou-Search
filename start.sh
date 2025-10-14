@@ -17,17 +17,17 @@ sleep 1
 
 # バックエンド起動（バックグラウンド）
 echo -e "${GREEN}Starting backend (Julia/Genie on port 8000)...${NC}"
-cd Narou-Search/backend
-julia --project=. server.jl &
+cd backend
+/opt/homebrew/bin/julia --project=. server.jl &
 BACKEND_PID=$!
-cd ../..
+cd ..
 
 # フロントエンド起動（バックグラウンド）
 echo -e "${GREEN}Starting frontend (HTTP server on port 5173)...${NC}"
-cd Narou-Search/frontend
+cd frontend
 python3 -m http.server 5173 &
 FRONTEND_PID=$!
-cd ../..
+cd ..
 
 echo -e "${BLUE}Servers started!${NC}"
 echo -e "Frontend: ${GREEN}http://localhost:5173${NC}"
