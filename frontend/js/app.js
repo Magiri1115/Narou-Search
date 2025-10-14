@@ -3,14 +3,9 @@ import { formatDate, buildQuery, esc } from './utils.js';
 import { renderPagination } from './pagination.js';
 import { analytics } from './firebase.js';
 
-const form = document.getElementById('search-form');
-const qEl = document.getElementById('q');
-const fromEl = document.getElementById('from');
-const toEl = document.getElementById('to');
-const resultsBody = document.getElementById('results-body');
-const metaEl = document.getElementById('meta');
-const paginationEl = document.getElementById('pagination');
-const clearBtn = document.getElementById('clear-btn');
+const form = document.getElementById("search-form");
+const resultsTable = document.getElementById("results-table");
+const resultsBody = document.getElementById("results-body");
 
 let currentPage = 1;
 let lastQuery = null;
@@ -36,10 +31,10 @@ function renderResults(data) {
     return;
   }
 
-  metaEl.textContent = `全 ${data.total} 件 — 表示 ${data.results.length} 件 (ページ ${data.page})`;
+    resultsTable.classList.remove("hidden");
 
-  for (const w of data.results) {
-    const tr = document.createElement('tr');
+    data.results.forEach((w) => {
+      const tr = document.createElement("tr");
 
     const titleTd = document.createElement('td');
     const a = document.createElement('a');
@@ -74,14 +69,15 @@ function renderResults(data) {
     });
     writerTd.appendChild(wa);
 
-    const dateTd = document.createElement('td');
-    dateTd.textContent = formatDate(w.general_firstup);
+      // 公開日
+      const dateTd = document.createElement("td");
+      dateTd.textContent = formatDate(w.general_firstup);
 
-    tr.appendChild(titleTd);
-    tr.appendChild(writerTd);
-    tr.appendChild(dateTd);
-    resultsBody.appendChild(tr);
-  }
+      tr.appendChild(titleTd);
+      tr.appendChild(writerTd);
+      tr.appendChild(dateTd);
+      resultsBody.appendChild(tr);
+    });
 
   // ページネーションの描画
   const totalPages = Math.ceil(data.total / (data.per_page || PAGE_SIZE));
