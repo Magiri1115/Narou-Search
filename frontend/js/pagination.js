@@ -1,7 +1,8 @@
 // pagination.js - ページネーション制御
 
-export function renderPagination(currentPage, totalPages, onPageChange) {
-  const container = document.getElementById("pagination");
+export function renderPagination(container, currentPage, totalPages, onPageChange) {
+  if (!container) return;
+
   container.innerHTML = "";
 
   if (totalPages <= 1) {
