@@ -2,22 +2,44 @@
 import { formatDate, buildQuery, esc } from './utils.js';
 import { renderPagination } from './pagination.js';
 
-const form = document.getElementById('search-form');
-const qEl = document.getElementById('q');
-const fromEl = document.getElementById('from');
-const toEl = document.getElementById('to');
-const resultsBody = document.getElementById('results-body');
-const metaEl = document.getElementById('meta');
-const paginationEl = document.getElementById('pagination');
-const clearBtn = document.getElementById('clear-btn');
-
-let currentPage = 1;
+let form, resultsTable, resultsBody, qEl, fromEl, toEl, sortEl, metaEl, paginationEl, clearBtn;
 let lastQuery = null;
 const PAGE_SIZE = 10; // バックエンドと合わせる
 
+// DOMが読み込まれた後に初期化
+function initializeApp() {
+  form = document.getElementById("search-form");
+  resultsTable = document.getElementById("results-table");
+  resultsBody = document.getElementById("results-body");
+  qEl = document.getElementById("query");
+  fromEl = document.getElementById("from");
+  toEl = document.getElementById("to");
+  sortEl = document.getElementById("sort");
+  metaEl = document.getElementById("error-message");
+  paginationEl = document.getElementById("pagination");
+  clearBtn = document.getElementById("clear-btn");
+
+  // イベントリスナーを登録
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleSearch(1);
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      qEl.value = '';
+      fromEl.value = '';
+      toEl.value = '';
+      handleSearch(1);
+    });
+  }
+}
+
 async function fetchSearch(params) {
   const qs = buildQuery(params);
-  const url = `/search?${qs}`; // フロントは環境に合わせてプロキシ/絶対URLに変更可
+  const url = `http://localhost:8000/search?${qs}`;
   const res = await fetch(url, {
     headers: {
       'Accept': 'application/json'
@@ -30,15 +52,22 @@ async function fetchSearch(params) {
 function renderResults(data) {
   // data expected: { total: int, page: int, per_page: int, results: [{ncode,title,writer,general_firstup}] }
   resultsBody.innerHTML = '';
+  metaEl.textContent = '';
+  metaEl.classList.add('hidden');
+
   if (!data || !Array.isArray(data.results) || data.results.length === 0) {
-    metaEl.textContent = '該当なし';
+    resultsTable.classList.add('hidden');
+    metaEl.textContent = '該当する作品が見つかりませんでした。';
+    metaEl.classList.remove('hidden');
+    paginationEl.innerHTML = '';
+    paginationEl.classList.add('hidden');
     return;
   }
 
-  metaEl.textContent = `全 ${data.total} 件 — 表示 ${data.results.length} 件 (ページ ${data.page})`;
+    resultsTable.classList.remove("hidden");
 
-  for (const w of data.results) {
-    const tr = document.createElement('tr');
+    data.results.forEach((w) => {
+      const tr = document.createElement("tr");
 
     const titleTd = document.createElement('td');
     const a = document.createElement('a');
@@ -61,14 +90,15 @@ function renderResults(data) {
     });
     writerTd.appendChild(wa);
 
-    const dateTd = document.createElement('td');
-    dateTd.textContent = formatDate(w.general_firstup);
+      // 公開日
+      const dateTd = document.createElement("td");
+      dateTd.textContent = formatDate(w.general_firstup);
 
-    tr.appendChild(titleTd);
-    tr.appendChild(writerTd);
-    tr.appendChild(dateTd);
-    resultsBody.appendChild(tr);
-  }
+      tr.appendChild(titleTd);
+      tr.appendChild(writerTd);
+      tr.appendChild(dateTd);
+      resultsBody.appendChild(tr);
+    });
 
   // ページネーションの描画
   const totalPages = Math.ceil(data.total / (data.per_page || PAGE_SIZE));
@@ -79,9 +109,10 @@ function renderResults(data) {
 
 function getSearchParams(page = 1) {
   return {
-    q: qEl.value.trim() || undefined,
-    from: fromEl.value.trim() || undefined,
-    to: toEl.value.trim() || undefined,
+    keyword: qEl.value.trim() || undefined,
+    year_from: fromEl.value.trim() || undefined,
+    year_to: toEl.value.trim() || undefined,
+    sort: sortEl.value || undefined,
     page: page,
     limit: PAGE_SIZE,
   };
@@ -94,7 +125,6 @@ async function handleSearch(page = 1) {
   // 前回と同じクエリかつ同じページならスキップ
   if (lastQuery === currentQuery) return;
   lastQuery = currentQuery;
-  currentPage = page;
 
   resultsBody.innerHTML = '<tr><td colspan="3" class="small-muted">検索中...</td></tr>';
   metaEl.textContent = '';
@@ -105,21 +135,16 @@ async function handleSearch(page = 1) {
     renderResults(data);
   } catch (error) {
     console.error('検索エラー:', error);
-    resultsBody.innerHTML = '<tr><td colspan="3" class="small-muted">エラーが発生しました。</td></tr>';
-    metaEl.textContent = '';
+    resultsTable.classList.add('hidden');
+    paginationEl.classList.add('hidden');
+    metaEl.textContent = `エラーが発生しました: ${error.message}`;
+    metaEl.classList.remove('hidden');
   }
 }
 
-// フォームの送信イベント
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  handleSearch(1); // 常に1ページ目から検索開始
-});
-
-// クリアボタンのイベント
-clearBtn.addEventListener('click', () => {
-  qEl.value = '';
-  fromEl.value = '';
-  toEl.value = '';
-  handleSearch(1);
-});
+// DOMが読み込まれたら初期化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
+}
