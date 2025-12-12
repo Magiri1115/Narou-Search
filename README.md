@@ -24,7 +24,6 @@
 - **Julia**: 1.6以上
 - **Python**: 3.6以上（フロントエンド配信用）
 - **SQLite3**: データベース用
-- **Bash**: 起動スクリプト用
 
 ### macOSの場合
 
@@ -38,6 +37,12 @@ brew install python3
 ```bash
 apt-get install julia python3 sqlite3
 ```
+
+### Windowsの場合
+
+1. **Julia**: [公式サイト](https://julialang.org/downloads/)からインストール
+2. **Python**: [公式サイト](https://www.python.org/downloads/)からインストール
+3. **Git Bash** (推奨): [Git for Windows](https://gitforwindows.org/)をインストール
 
 ## セットアップ手順
 
@@ -64,12 +69,21 @@ cd ..
 
 ### 簡単な起動（推奨）
 
+#### macOS / Linux / Git Bash (Windows)
+
 ```bash
 bash start.sh
 ```
 
-このスクリプトは以下を自動的に行います：
+#### Windows (コマンドプロンプト / PowerShell)
+
+```cmd
+start.bat
+```
+
+これらのスクリプトは以下を自動的に行います：
 - 既存のサーバープロセスの停止（ポート5173, 8000）
+- JuliaとPythonコマンドの自動検出
 - バックエンドサーバーの起動（Julia/Genie on port 8000）
 - フロントエンドサーバーの起動（HTTP server on port 5173）
 
