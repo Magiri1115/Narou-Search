@@ -1,0 +1,5 @@
+# このプロジェクトはPythonの外部パッケージを使用していません
+# Pythonは標準ライブラリのhttp.serverのみを使用しています
+#
+# Julia依存関係については backend/Project.toml を参照してください
+# インストール: cd backend && julia --project=. -e 'using Pkg; Pkg.instantiate()'
